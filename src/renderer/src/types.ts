@@ -191,12 +191,19 @@ export interface DB {
 }
 
 // Live system status for the Settings connections panel (¶T3), adapted from
-// /tutor/healthz + /admin/jobs. Only API/DB + scheduled-job presence are
-// probeable today; Notion/OpenAI/MCP reachability await a backend status endpoint.
+// /tutor/healthz (DB) + /api/v1/admin/status (real AnkiConnect/OpenAI/Notion
+// reachability probes, backend T39).
+export interface ServiceHealthT {
+  configured: boolean
+  reachable: boolean
+  detail: string | null
+}
 export interface SystemStatusT {
   dbReachable: boolean
   attemptCount: number
-  jobIds: string[]
+  anki: ServiceHealthT
+  openai: ServiceHealthT
+  notion: ServiceHealthT
 }
 
 // Which domains are backed by a real endpoint vs. always-mock (P2 / fenced).

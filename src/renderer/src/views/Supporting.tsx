@@ -391,21 +391,23 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
   const db = useDB()
   const { status, loadSystemStatus } = useStore()
 
-  // Live probe (¶T3): /tutor/healthz (API+DB) + /admin/jobs (scheduled jobs).
-  // Notion/OpenAI/MCP have no probe endpoint yet → shown as "scheduled"/"unknown",
-  // not "connected" (¶V1: ⊥ claim health we can't verify). Backend status endpoint
-  // tracked in ../SPEC.md T39.
+  // Live probes (¶T3): /tutor/healthz (DB) + /api/v1/admin/status (real
+  // AnkiConnect/OpenAI/Notion reachability, backend T39).
   const sys = useAsync(
     () => (status.online && status.hasToken ? loadSystemStatus() : Promise.resolve(null)),
     [status.online, status.hasToken]
   )
-  const has = (job: string) => sys.data?.jobIds.includes(job) ?? false
+  const probing = status.online && status.hasToken && sys.loading
+  // reachable → connected; configured-but-down → offline; unconfigured → unknown
+  const svc = (h?: { configured: boolean; reachable: boolean }) =>
+    !h ? 'unknown' : h.reachable ? 'connected' : h.configured ? 'offline' : 'unknown'
+  const d = sys.data
   const conns = [
     { name: 'Gradient API', desc: `${status.apiBase} · X-Coach-Token`, status: status.online ? 'connected' : 'offline', detail: status.online ? `${status.live.size} live data sources this session` : 'Unreachable — start uvicorn on :8000' },
-    { name: 'Postgres', desc: 'app DB · asyncpg', status: sys.data ? (sys.data.dbReachable ? 'connected' : 'offline') : 'unknown', detail: sys.data ? `${sys.data.attemptCount.toLocaleString()} attempts recorded` : 'probing…' },
-    { name: 'AnkiConnect', desc: '127.0.0.1:8765 · read + allowlisted writes', status: status.live.has('anki') ? 'connected' : has('run_anki_sync') ? 'scheduled' : 'unknown', detail: status.live.has('anki') ? `${db.ANKI_QUEUE.length} cards in review queue` : has('run_anki_sync') ? 'sync job scheduled (health not probed)' : 'no live queue this session' },
-    { name: 'OpenAI', desc: 'tagging · calibrator · embeddings', status: has('run_categorizer') ? 'scheduled' : 'unknown', detail: has('run_categorizer') ? 'categorizer job scheduled (reachability not probed)' : 'no probe endpoint yet' },
-    { name: 'Notion', desc: 'Write-out only · one page per outline node', status: 'unknown', detail: 'no probe endpoint yet · sync workflow P2' },
+    { name: 'Postgres', desc: 'app DB · asyncpg', status: d ? (d.dbReachable ? 'connected' : 'offline') : 'unknown', detail: d ? `${d.attemptCount.toLocaleString()} attempts recorded` : 'probing…' },
+    { name: 'AnkiConnect', desc: '127.0.0.1:8765 · read + allowlisted writes', status: svc(d?.anki), detail: d?.anki.detail ?? (status.live.has('anki') ? `${db.ANKI_QUEUE.length} cards in review queue` : 'probing…') },
+    { name: 'OpenAI', desc: 'tagging · calibrator · embeddings', status: svc(d?.openai), detail: d?.openai.detail ?? 'reachable' },
+    { name: 'Notion', desc: 'Write-out only · one page per outline node', status: svc(d?.notion), detail: d?.notion.detail ?? (d?.notion.reachable ? 'token valid (write-out only)' : 'probing…') },
     { name: 'MCP host', desc: 'Socratic tutor seam · X-Coach-Token', status: status.hasToken ? 'connected' : 'no token', detail: status.hasToken ? 'X-Coach-Token present' : 'Set COACH_TOKEN in the environment' },
     { name: 'Chrome extension', desc: 'UWorld + generic web Qbank capture', status: 'unknown', detail: 'inbound only · POST /api/v1/captures' }
   ]
@@ -415,7 +417,10 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
     <div className="content-scroll" style={{ maxWidth: 880 }}>
       <h1 className="h1">Settings</h1>
 
-      <h3 className="section-title" style={{ marginTop: 28 }}>Connections</h3>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 28, marginBottom: 10 }}>
+        <h3 className="section-title" style={{ margin: 0 }}>Connections</h3>
+        {probing && <span className="skeleton" style={{ width: 60, height: 12, borderRadius: 4 }} />}
+      </div>
       <div className="card" style={{ overflow: 'hidden' }}>
         {conns.map((c, i) => (
           <div key={c.name} style={{ display: 'grid', gridTemplateColumns: '200px 1fr auto', gap: 18, alignItems: 'center', padding: '14px 18px', borderBottom: i === conns.length - 1 ? 'none' : '0.5px solid var(--hair-2)' }}>

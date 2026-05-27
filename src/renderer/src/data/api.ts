@@ -169,6 +169,30 @@ export interface SchedulerJob {
 export const getTutorHealthz = () => api<Healthz>('/api/v1/tutor/healthz')
 export const getAdminJobs = () => api<SchedulerJob[]>('/api/v1/admin/jobs')
 
+export interface ServiceHealth {
+  configured: boolean
+  reachable: boolean
+  detail: string | null
+}
+export interface JobHealth {
+  job_id: string
+  next_run_time: string | null
+  last_run: {
+    status: string
+    started_at: string
+    finished_at: string | null
+    items_processed: number | null
+    error_text: string | null
+  } | null
+}
+export interface AdminStatus {
+  anki: ServiceHealth
+  openai: ServiceHealth
+  notion: ServiceHealth
+  jobs: JobHealth[]
+}
+export const getSystemStatus = () => api<AdminStatus>('/api/v1/admin/status')
+
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>
   api<ApiCourse>('/api/v1/courses', { method: 'POST', auth: false, body: { slug, name, description } })

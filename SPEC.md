@@ -91,7 +91,7 @@ overlays. Offline fallback stays.
 |----|----|------|-------|
 | T1 | x | map `captures.topics` → node label in `adaptCaptures` (`firstTopicNodeId` reads node_id); flows now backend T38 returns `{node_id,name,path,kind}` (¶B1,¶V10) | V3,V9,backend-T38 |
 | T2 | x | session node attribution live from `…/sessions/{id}/summary` `by_topic` → counts/accuracy/flagged/coverage + Node-coverage MasteryBars (V-O1 rollup). Per-question grid stays sampled+badged — no per-attempt feed (¶O) | V3,V7,backend-T38 |
-| T3 | x | settings connections: API+DB live from `/tutor/healthz`; Anki/OpenAI "scheduled" from `/admin/jobs` job presence; via `loadSystemStatus`+useAsync (settleAll). PARTIAL — Notion/OpenAI/MCP reachability + per-job last-run not probeable → shown "unknown"/"scheduled" not "connected" (¶V1). Full health awaits backend T39 | V3,V7,backend-T39 |
+| T3 | x | settings connections live: API+DB from `/tutor/healthz`; AnkiConnect/OpenAI/Notion real reachability from `GET /admin/status` (backend T39, `{configured,reachable,detail}`); via `loadSystemStatus`+useAsync (settleAll). MCP=token-presence, Chrome ext=inbound (no probe → "unknown", ¶V1) | V3,V7,backend-T39 |
 | T4 | x | add typed `useAsync` + per-view loading skeletons; per-domain failure isolated (`allSettled`) ⊥ block app | V2,V7 |
 | T5 | . | Review: replace sample `picked`/`distribution`/`pastAttempts` with live — backend adds distribution + attempt-history to `by-qid` (?) | V3,V6 |
 | T6 | . | Anki: consume real retention col + per-day load series from extended `/anki/load-adherence` (?) ⊥ lapse-derived retention + sampled `ANKI_LOAD` | V3,V6 |

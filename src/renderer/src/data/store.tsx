@@ -364,13 +364,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const loadSystemStatus = React.useCallback(async (): Promise<SystemStatusT | null> => {
-    // ¶V7: healthz + jobs isolated — one failing read still yields the other.
-    const r = await settleAll({ health: API.getTutorHealthz(), jobs: API.getAdminJobs() })
-    if (!r.health && !r.jobs) return null
+    // ¶V7: healthz (DB) + admin/status (service probes, backend T39) isolated —
+    // one failing read still yields the other.
+    const r = await settleAll({ health: API.getTutorHealthz(), status: API.getSystemStatus() })
+    if (!r.health && !r.status) return null
+    const offline = { configured: false, reachable: false, detail: null }
     return {
       dbReachable: r.health?.db_reachable ?? false,
       attemptCount: r.health?.attempt_count ?? 0,
-      jobIds: (r.jobs ?? []).map((j) => j.job_id)
+      anki: r.status?.anki ?? offline,
+      openai: r.status?.openai ?? offline,
+      notion: r.status?.notion ?? offline
     }
   }, [])
 
