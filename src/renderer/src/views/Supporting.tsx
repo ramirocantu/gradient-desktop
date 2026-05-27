@@ -257,7 +257,7 @@ export function NotionView() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
         <StatCard label="Notion pages" value={db.NOTION_PAGES.length} accent="slate" sub={db.COURSE.nodeCount ? `of ${db.COURSE.nodeCount.toLocaleString()} nodes` : undefined} footer={<div style={{ height: 4, borderRadius: 999, background: 'rgba(40,30,15,0.06)', overflow: 'hidden' }}><div style={{ height: '100%', width: '0%', background: 'var(--slate)' }} /></div>} />
-        <StatCard label="Blocks written" value="—" accent="ink" sub="across all pages" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>endpoint pending (P2)</div>} />
+        <StatCard label="Blocks written" value="—" accent="ink" sub="across all pages" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>block_count not modeled (§I)</div>} />
         <StatCard label="Pending writes" value="—" accent="amber" sub="awaiting sync" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>idempotent upsert</div>} />
       </div>
 
@@ -352,7 +352,7 @@ export function SessionView() {
         <StatCard label="Score" value={`${Math.round(accuracy * 100)}%`} accent="moss" footer={<div style={{ height: 4, borderRadius: 999, background: 'var(--m0)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${accuracy * 100}%`, background: 'var(--moss)' }} /></div>} />
         <StatCard label="Flagged" value={flaggedCount} accent="clay" sub="for review" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>from attempt notes</div>} />
         <StatCard label="Coverage" value={topicCount} accent="slate" sub="nodes touched" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>subtree-rolled per V-O1</div>} />
-        <StatCard label="New connections" value="—" accent="plum" sub="discovered" footer={<div style={{ display: 'flex', alignItems: 'center', gap: 6, font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="stub-badge">no endpoint</span> concept_edges P2</div>} />
+        <StatCard label="New connections" value="—" accent="plum" sub="discovered" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>no per-session edge attribution</div>} />
       </div>
 
       <div style={{ marginTop: 28 }}>

@@ -272,7 +272,7 @@ export function NodeDetailView() {
         <MiniStat label="Mastery" value={`${Math.round(sel.mastery * 100)}%`} hint={masteryLabel(sel.mastery)} fill={masteryColor(sel.mastery)} />
         <MiniStat label="Questions" value="—" hint="endpoint pending" />
         <MiniStat label="Anki cards" value={String(db.ANKI_QUEUE.length)} hint="in review queue" />
-        <MiniStat label="Atomic facts" value="—" hint="endpoint pending (P2)" />
+        <MiniStat label="Atomic facts" value={String(db.FACTS.filter((f) => f.node === sel.id).length)} hint="grounded to this node" />
       </div>
 
       <NodeItemsTabs />
