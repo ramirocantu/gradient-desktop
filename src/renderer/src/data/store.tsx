@@ -39,7 +39,11 @@ function relTime(iso: string | null | undefined): string {
 function minutesBetween(a: string | null, b: string | null): string {
   if (!a || !b) return '—'
   const mins = Math.round((Date.parse(b) - Date.parse(a)) / 60000)
-  return Number.isFinite(mins) && mins > 0 ? `${mins}m` : '—'
+  if (!Number.isFinite(mins) || mins <= 0) return '—'
+  if (mins < 60) return `${mins}m`
+  if (mins < 1440) return `${Math.floor(mins / 60)}h ${mins % 60}m`
+  const d = Math.floor(mins / 1440)
+  return `${d}d ${Math.round((mins % 1440) / 60)}h`
 }
 
 // ───────────────────────── adapters (API → DB shape) ─────────────────────────
