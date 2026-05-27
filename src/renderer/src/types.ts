@@ -218,5 +218,5 @@ export interface NodeMasteryT {
 // No-endpoint domains stay empty (EmptyState in the view) until their route ships.
 export type Domain =
   | 'course' | 'outline' | 'flagged' | 'sessions' | 'captures'
-  | 'anki' | 'review'
-export type StubDomain = 'mastery' | 'connections' | 'facts' | 'notion'
+  | 'anki' | 'review' | 'connections'
+export type StubDomain = 'mastery' | 'facts' | 'notion'

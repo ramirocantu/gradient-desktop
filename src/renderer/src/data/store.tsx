@@ -5,7 +5,7 @@ import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
 import type {
   DB, Course, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
-  SystemStatusT, NodeMasteryT, TodayT
+  SystemStatusT, NodeMasteryT, TodayT, ConnectionT
 } from '../types'
 
 // ───────────────────────── empty base (⊥ mock) ─────────────────────────
@@ -160,6 +160,21 @@ function adaptSessions(rows: API.RecentSession[]): SessionT[] {
     time: minutesBetween(r.started_at, r.ended_at),
     source: 'uworld',
     node: 1
+  }))
+}
+
+// ¶T8: concept_edges → connections feed. Edge endpoints already carry node
+// names; NODE_BY_ID is a fallback. `via` = edge kind (similarity|manual).
+function adaptEdges(rows: API.ConceptEdgeOut[], byId: Record<number, OutlineNodeT>): ConnectionT[] {
+  const label = (e: { node_id: number; name: string | null }) =>
+    e.name ?? byId[e.node_id]?.name ?? `node ${e.node_id}`
+  return rows.map((e) => ({
+    from: { kind: 'node', id: e.from.node_id, label: label(e.from) },
+    to: { kind: 'node', id: e.to.node_id, label: label(e.to) },
+    via: e.kind,
+    node: e.from.node_id,
+    when: relTime(e.created_at),
+    score: e.score ?? undefined
   }))
 }
 
@@ -367,7 +382,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           captures: API.getRecentCaptures(8),
           ankiQ: API.getAnkiReviewQueue(),
           loadCfg: API.getLoadConfig(),
-          adherence: API.getLoadAdherence()
+          adherence: API.getLoadAdherence(),
+          edges: API.getConceptEdges({ limit: 50 })
         })
         if (r.flagged) {
           live.add('flagged')
@@ -415,6 +431,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (resumeQid) {
           live.add('review')
           next.REVIEW_QUESTION = { ...next.REVIEW_QUESTION, qid: resumeQid }
+        }
+        // ¶T8: concept_edges feed (live, even when empty → ⊥ keep mock).
+        if (r.edges !== undefined) {
+          live.add('connections')
+          next.CONNECTIONS = adaptEdges(r.edges, next.NODE_BY_ID)
+          next.TODAY = { ...next.TODAY, newConnections: r.edges.length }
         }
       }
 

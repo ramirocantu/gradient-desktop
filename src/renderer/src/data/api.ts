@@ -224,6 +224,19 @@ export interface AdminStatus {
 }
 export const getSystemStatus = () => api<AdminStatus>('/api/v1/admin/status')
 
+// ── KB substrate reads (T45–T48 / ¶T8–¶T11). Token-gated; each returns []
+// until its substrate is populated. Fields mirror app/api/v1/kb_reads.py. ──
+export interface ConceptEdgeOut {
+  id: number
+  from: { node_id: number; name: string | null }
+  to: { node_id: number; name: string | null }
+  kind: string // 'similarity' | 'manual'
+  score: number | null
+  created_at: string
+}
+export const getConceptEdges = (params: { node_id?: number; kind?: string; limit?: number } = {}) =>
+  api<ConceptEdgeOut[]>('/api/v1/concept-edges', { query: params })
+
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>
   api<ApiCourse>('/api/v1/courses', { method: 'POST', body: { slug, name, description } })

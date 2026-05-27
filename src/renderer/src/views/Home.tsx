@@ -110,11 +110,13 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
               <h3 className="h3" style={{ font: '500 18px var(--serif)', marginBottom: 2 }}>New connections</h3>
               <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>Cross-links between questions, anki, facts · today</div>
             </div>
-            <span className="stub-badge" title="concept_edges is P2 — no endpoint yet (BACKEND_CORE §7)">no endpoint</span>
+            {status.live.has('connections')
+              ? <span className="badge moss" style={{ height: 18, padding: '0 6px' }}><span className="d" />live</span>
+              : <span className="stub-badge" title="concept_edges read endpoint (T45)">no endpoint</span>}
           </div>
           <div className="card" style={{ padding: 6 }}>
             {db.CONNECTIONS.length === 0 ? (
-              <EmptyState text="No connections yet" hint="concept_edges endpoint pending (P2)" />
+              <EmptyState text="No connections yet" hint={status.live.has('connections') ? 'no derived edges yet — similarity/manual edges appear here' : 'backend offline'} />
             ) : (
             <div className="linkrail">
               {db.CONNECTIONS.map((c, i) => (

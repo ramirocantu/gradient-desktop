@@ -167,7 +167,7 @@ function NodeItemsTabs() {
         {tab === 'facts' && <NodeFactsList />}
         {tab === 'discrim' && <NodeDiscriminatorsList />}
         {tab === 'links' && (db.CONNECTIONS.length === 0
-          ? <div className="card"><EmptyState text="No linked nodes" hint="concept_edges endpoint pending (P2)" /></div>
+          ? <div className="card"><EmptyState text="No linked nodes" hint="no concept edges derived yet (similarity/manual)" /></div>
           : <LinkRail items={db.CONNECTIONS} />)}
       </div>
     </div>
