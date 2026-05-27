@@ -99,13 +99,13 @@ read ⇒ skeletons + empty-states; ⊥ sample/mock data.
 | T5 | x | Review: live `picked`/`distribution`/`pastAttempts` from `by-qid` (`answer_distribution`+`picked`+`attempt_history`, backend T42). adaptChoices fixed to read `{key,plain}`. | V3,V6,backend-T42 |
 | T6 | x | Anki: real `retention` (else `retrievability`) per card; per-day `reviewed_series` from `/anki/load-adherence` → `ANKI_LOAD` (backend T43). ⊥ lapse-derived/sampled. | V3,V6,backend-T43 |
 | T7 | x | Mastery: `pseudoMastery` removed. Roots overlaid from `/outline/courses/{id}/mastery` at load; browsed subtree from `/outline/nodes/{id}/mastery` on select (backend T44). Unmeasured nodes = 0 (honest, ⊥ fabricated). Home badge → live. | V6,V9,V4,backend-T44 |
-| T8 | . | Connections feed: `CONNECTIONS` sample removed → EmptyState (Home rail, Outline links tab, Session stat). Wire `concept_edges` read API (?) (recent edges / by-node) when it ships | V6,V9,V4,?backend-T45 |
-| T9 | . | Atomic facts: `FACTS` sample removed → EmptyState (FactsView + NodeFactsList + Review linked-facts + PdfsView). Wire `atomic_facts` read API (?) when it ships | V6,V9,V4,?backend-T46 |
-| T10 | . | Notion pages: `NOTION_PAGES` sample removed → EmptyState (NotionView page index + zeroed StatCards). Wire `notion_pages` read API (?) when it ships | V6,V9,V4,?backend-T47 |
-| T11 | . | PDFs: `PDFS` sample removed → EmptyState (PdfsView). Wire `pdf_sources` read API (?) (inbox + per-pdf facts) when it ships | V6,V9,V4,?backend-T48 |
+| T8 | x | Connections feed live: `CONNECTIONS` ← `concept_edges` read (`adaptEdges`); via=kind, score, recency from real edges. Home rail + Outline links tab; Session stat de-badged (no per-session attribution). dev rows via `seed_dev` KB-substrate. | V6,V9,V4,backend-T45 |
+| T9 | x | Atomic facts live: `FACTS` ← `atomic_facts` read; FactsView + NodeFactsList + NodeDetail count + Review linked-facts (by-node) + PdfsView (per-pdf). `version` (extractor_version) is on `atomic_fact_tags` not the payload (§I) → "—" (⊥ fabricate). | V6,V9,V4,backend-T46 |
+| T10 | x | Notion pages live: `NOTION_PAGES` ← `notion_pages` pointer index. `status` derived from `last_synced_at` (synced/pending); `block_count` unmodeled (§I) → "—". | V6,V9,V4,backend-T47 |
+| T11 | x | PDFs live: `PDFS` ← `pdf_sources` inbox + per-pdf facts (filtered by filename stem). `pages`/`node` unmodeled (§I — pdf_sources course-scoped; facts carry node_id) → hidden/null. | V6,V9,V4,backend-T48 |
 | T12 | . | Tutor chat: `TUTOR_MESSAGES` mock removed → EmptyState ("MCP host pending"). Wire real Socratic turn via MCP host / `window.claude`; keep discriminator save | V5 |
-| T13 | . | extend `data/api.ts` with each new endpoint fn + raw type as backend ships; adapters only ⊥ view-level fetch | V3 |
-| T14 | . | audit: assert no domain both live + sample-badged after each wire | V1,V9 |
+| T13 | x | `data/api.ts` extended with `getConceptEdges`/`getAtomicFacts`/`getNotionPages`/`getPdfSources` + raw types (`*Out`); adapters in `store.tsx`, ⊥ view-level fetch (Review by-node facts via `loadQuestion`). | V3 |
+| T14 | x | audit (post T8–T11): no domain both live + sample-badged. Dropped stale P2 badges on NodeDetail facts, Session "new connections", Notion "blocks written". Discriminator-listing keeps (P2) — write-only, no read route. | V1,V9 |
 
 ## ¶B
 
