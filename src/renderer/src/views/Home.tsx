@@ -100,7 +100,7 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
             <h3 className="h3" style={{ font: '500 18px var(--serif)', marginBottom: 2, whiteSpace: 'nowrap' }}>Performance per topic</h3>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>
-                {status.live.has('outline') ? 'Live outline' : 'Sample outline'} · mastery not yet computed
+                {status.live.has('mastery') ? 'Live · accuracy-based mastery (subtree rollup)' : status.live.has('outline') ? 'Live outline · no attempts tagged yet' : 'Sample outline'}
               </div>
               <div style={{ marginLeft: 'auto' }}><MasteryLegend /></div>
             </div>

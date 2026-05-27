@@ -87,6 +87,10 @@ export interface QuestionDetail {
   correct_choice: string | null
   explanation: string | null
   tags: QuestionTagOut[]
+  // T42: per-choice attempt counts, the user's pick, full attempt history
+  picked: string | null
+  answer_distribution: Record<string, number>
+  attempt_history: { attempted_at: string | null; is_correct: boolean; selected_choice: string; time_seconds: number | null }[]
   features: Record<string, unknown> | null
 }
 
@@ -104,6 +108,9 @@ export interface AnkiCardOut {
   queue: number | null
   sync_at: string
   tags: { tag_raw: string; parsed_kind: string; topic_id: number | null; question_qid: string | null }[]
+  // T43: review-queue cards carry these (AnkiReviewQueueCardOut); null elsewhere
+  retention?: number | null
+  retrievability?: number | null
 }
 
 export interface LoadAdherence {
@@ -115,6 +122,8 @@ export interface LoadAdherence {
   headroom_card_review_pct: number
   headroom_minutes_pct: number
   status_label: string
+  // T43: dense per-day reviewed counts over the window
+  reviewed_series: { date: string; reviewed: number }[]
 }
 
 export interface LoadConfig {
@@ -153,6 +162,28 @@ export const getCardsByQid = (qid: string) =>
 export const getLoadAdherence = () =>
   api<LoadAdherence>('/api/v1/anki/load-adherence')
 export const getLoadConfig = () => api<LoadConfig>('/api/v1/anki/load-config')
+
+// T44: per-node/subtree + course mastery (open routes, ⊥ token).
+export interface MasteryRollup {
+  attempts: number
+  correct: number
+  accuracy: number
+  wilson_lower: number
+}
+export interface CourseMastery {
+  course: { id: number; slug: string; name: string }
+  total: MasteryRollup
+  nodes: ({ node_id: number; name: string; kind: string; path: string } & MasteryRollup)[]
+}
+export interface NodeMastery {
+  node: { id: number; name: string; kind: string; depth: number; parent_id: number | null; path: string }
+  rollup: MasteryRollup
+  children: ({ node_id: number; name: string; kind: string; path: string } & MasteryRollup)[]
+}
+export const getCourseMastery = (courseId: number) =>
+  api<CourseMastery>(`/api/v1/outline/courses/${courseId}/mastery`, { auth: false })
+export const getNodeMastery = (nodeId: number) =>
+  api<NodeMastery>(`/api/v1/outline/nodes/${nodeId}/mastery`, { auth: false })
 
 export interface Healthz {
   db_reachable: boolean

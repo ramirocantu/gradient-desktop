@@ -93,9 +93,9 @@ overlays. Offline fallback stays.
 | T2 | x | session node attribution live from `…/sessions/{id}/summary` `by_topic` → counts/accuracy/flagged/coverage + Node-coverage MasteryBars (V-O1 rollup). Per-question grid stays sampled+badged — no per-attempt feed (¶O) | V3,V7,backend-T38 |
 | T3 | x | settings connections live: API+DB from `/tutor/healthz`; AnkiConnect/OpenAI/Notion real reachability from `GET /admin/status` (backend T39, `{configured,reachable,detail}`); via `loadSystemStatus`+useAsync (settleAll). MCP=token-presence, Chrome ext=inbound (no probe → "unknown", ¶V1) | V3,V7,backend-T39 |
 | T4 | x | add typed `useAsync` + per-view loading skeletons; per-domain failure isolated (`allSettled`) ⊥ block app | V2,V7 |
-| T5 | . | Review: replace sample `picked`/`distribution`/`pastAttempts` with live — backend adds distribution + attempt-history to `by-qid` (?) | V3,V6 |
-| T6 | . | Anki: consume real retention col + per-day load series from extended `/anki/load-adherence` (?) ⊥ lapse-derived retention + sampled `ANKI_LOAD` | V3,V6 |
-| T7 | . | Mastery: replace `pseudoMastery` overlay with per-node/subtree rollup endpoint (?) (backend unfence analytics, V-O1 set rollup); remove mastery sample-badge | V6,V9,V4 |
+| T5 | x | Review: live `picked`/`distribution`/`pastAttempts` from `by-qid` (`answer_distribution`+`picked`+`attempt_history`, backend T42). adaptChoices fixed to read `{key,plain}`. | V3,V6,backend-T42 |
+| T6 | x | Anki: real `retention` (else `retrievability`) per card; per-day `reviewed_series` from `/anki/load-adherence` → `ANKI_LOAD` (backend T43). ⊥ lapse-derived/sampled. | V3,V6,backend-T43 |
+| T7 | x | Mastery: `pseudoMastery` removed. Roots overlaid from `/outline/courses/{id}/mastery` at load; browsed subtree from `/outline/nodes/{id}/mastery` on select (backend T44). Unmeasured nodes = 0 (honest, ⊥ fabricated). Home badge → live. | V6,V9,V4,backend-T44 |
 | T8 | . | Connections feed: replace `CONNECTIONS` sample with `concept_edges` read API (?) (recent edges / by-node); via/score/kind from real edges | V6,V9,V4 |
 | T9 | . | Atomic facts: replace `FACTS` sample with `atomic_facts` read API (?) (by node / by pdf); wire FactsView + NodeFactsList + Review linked-facts | V6,V9,V4 |
 | T10 | . | Notion pages: replace `NOTION_PAGES` sample with `notion_pages` read API (?) (page index + status) | V6,V9,V4 |

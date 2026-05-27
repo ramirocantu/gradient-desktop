@@ -80,7 +80,9 @@ export function AnkiView() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <h3 className="section-title" style={{ margin: 0 }}>Load adherence · daily reviews vs target {target}</h3>
-          <span className="stub-badge">30-day series sampled</span>
+          {status.live.has('anki-series')
+            ? <span className="badge moss" style={{ height: 18, padding: '0 6px' }}><span className="d" />live</span>
+            : <span className="stub-badge">30-day series sampled</span>}
         </div>
         <div className="card" style={{ padding: '18px 18px 14px' }}>
           <div style={{ position: 'relative', height: 140 }}>

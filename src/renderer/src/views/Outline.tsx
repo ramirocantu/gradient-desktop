@@ -1,12 +1,14 @@
 import React from 'react'
 import { Icon, KindGlyph, MasteryViz, MasteryBars, LinkRail } from '../components/primitives'
 import { masteryColor, masteryLabel } from '../helpers'
-import { useDB } from '../data/store'
+import { useDB, useStore } from '../data/store'
+import { useAsync } from '../data/useAsync'
 import type { Tweaks } from '../types'
 import type { View } from '.'
 
 export function OutlineView({ tweaks, setView }: { tweaks: Tweaks; setView: (v: View) => void }) {
   const db = useDB()
+  const { loadNodeMastery } = useStore()
   const childrenOf = (id: number) => db.OUTLINE.filter((n) => n.parent === id)
   const rootNodes = db.OUTLINE.filter((n) => n.parent === null)
   const firstLeaf = db.OUTLINE.find((n) => n.current) ?? rootNodes[0]
@@ -33,7 +35,12 @@ export function OutlineView({ tweaks, setView }: { tweaks: Tweaks; setView: (v: 
   rootNodes.forEach(visit)
 
   const sel = db.NODE_BY_ID[selected]
-  const subtreeChildren = childrenOf(selected)
+  // ¶T7: live subtree mastery for the browsed node (self + children) overlays
+  // the 0 baseline; course endpoint only covers roots, this fills deeper nodes.
+  const nm = useAsync(() => loadNodeMastery(selected), [selected])
+  const liveMast = nm.data?.byId ?? {}
+  const mast = (id: number, fallback: number) => liveMast[id] ?? fallback
+  const subtreeChildren = childrenOf(selected).map((c) => ({ ...c, mastery: mast(c.id, c.mastery) }))
 
   return (
     <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
@@ -65,7 +72,7 @@ export function OutlineView({ tweaks, setView }: { tweaks: Tweaks; setView: (v: 
                   {n.name}
                 </span>
                 <span style={{ width: 28, height: 4, borderRadius: 999, background: 'var(--m0)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${n.mastery * 100}%`, background: masteryColor(n.mastery) }} />
+                  <div style={{ height: '100%', width: `${mast(n.id, n.mastery) * 100}%`, background: masteryColor(mast(n.id, n.mastery)) }} />
                 </span>
               </div>
             )
@@ -81,7 +88,7 @@ export function OutlineView({ tweaks, setView }: { tweaks: Tweaks; setView: (v: 
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               <span className="badge slate"><span className="d" />{sel?.kind}</span>
               <span className="badge"><span className="d" />{sel?.items} items</span>
-              <span className="badge moss"><span className="d" style={{ background: masteryColor(sel?.mastery) }} />{Math.round((sel?.mastery ?? 0) * 100)}% mastery · {masteryLabel(sel?.mastery)}</span>
+              <span className="badge moss"><span className="d" style={{ background: masteryColor(mast(sel.id, sel?.mastery ?? 0)) }} />{Math.round(mast(sel.id, sel?.mastery ?? 0) * 100)}% mastery · {masteryLabel(mast(sel.id, sel?.mastery ?? 0))}</span>
               <span className="badge slate"><span className="d" /><Icon name="notion" size={9} color="var(--slate)" /> notion · {sel?.name?.slice(0, 14)}</span>
             </div>
           </div>

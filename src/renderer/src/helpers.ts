@@ -35,14 +35,6 @@ export function makeNodePath(byId: Record<number, OutlineNodeT>) {
   }
 }
 
-// Deterministic pseudo-mastery for live outline nodes (the analytics/mastery
-// service is FENCED — see docs/BACKEND_CORE.md §7 — so there is no real per-node
-// mastery to read yet). Stable per node id so the heatmap doesn't flicker.
-export function pseudoMastery(id: number): number {
-  const x = Math.sin(id * 12.9898) * 43758.5453
-  return 0.3 + (x - Math.floor(x)) * 0.6
-}
-
 // Section abbreviation heuristic for live nodes that lack a design-supplied abbr.
 const ABBR_HINTS: Record<string, string> = {
   'biological': 'B/BC',

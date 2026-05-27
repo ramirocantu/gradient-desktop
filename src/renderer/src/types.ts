@@ -206,6 +206,13 @@ export interface SystemStatusT {
   notion: ServiceHealthT
 }
 
+// On-demand subtree mastery (¶T7) from /outline/nodes/{id}/mastery.
+export interface NodeMasteryT {
+  nodeId: number
+  accuracy: number
+  byId: Record<number, number> // node_id → accuracy (self + direct children)
+}
+
 // Which domains are backed by a real endpoint vs. always-mock (P2 / fenced).
 export type Domain =
   | 'course' | 'outline' | 'flagged' | 'sessions' | 'captures'

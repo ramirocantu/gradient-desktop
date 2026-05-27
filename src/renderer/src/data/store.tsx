@@ -3,11 +3,22 @@ import * as mock from './mock'
 import * as API from './api'
 import { ApiError, cfg } from './client'
 import { settleAll } from './settle'
-import { buildNodeIndex, makeNodePath, pseudoMastery, deriveAbbr } from '../helpers'
+import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
 import type {
   DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
-  SystemStatusT
+  SystemStatusT, NodeMasteryT
 } from '../types'
+
+// Short attempt-history date: "Today" or "May 26".
+function fmtAttemptDate(iso: string | null): string {
+  if (!iso) return '—'
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso
+  const d = new Date(t)
+  const today = new Date()
+  if (d.toDateString() === today.toDateString()) return 'Today'
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
 // ───────────────────────── relative-time helper ─────────────────────────
 function relTime(iso: string | null | undefined): string {
@@ -52,11 +63,18 @@ function adaptOutline(resp: API.OutlineTreeResp): OutlineNodeT[] {
     kind: n.kind,
     name: n.name,
     abbr: n.depth === 0 ? deriveAbbr(n.name) : undefined,
-    // analytics/mastery is FENCED (no per-node mastery endpoint yet) — stable
-    // pseudo-value so the viz renders; swap for a real read when it lands.
-    mastery: pseudoMastery(n.node_id),
+    // real mastery overlaid from the course-mastery endpoint after load (¶T7);
+    // 0 = no measured attempts yet (honest, ⊥ fabricated pseudo-value).
+    mastery: 0,
     items: Math.max(1, descendantCount(n.node_id) || 1)
   }))
+}
+
+// Overlay accuracy from /outline/courses/{id}/mastery onto outline rows (¶T7).
+// Course endpoint covers root nodes; deeper nodes fill in on-demand via
+// loadNodeMastery when a subtree is browsed.
+function applyMastery(outline: OutlineNodeT[], byId: Record<number, number>): OutlineNodeT[] {
+  return outline.map((n) => (byId[n.id] != null ? { ...n, mastery: byId[n.id] } : n))
 }
 
 function adaptCaptures(rows: API.RecentCapture[]): CaptureT[] {
@@ -133,12 +151,15 @@ function adaptAnkiQueue(rows: API.AnkiCardOut[]): AnkiCardT[] {
         : ''
     const topicTag = c.tags.find((t) => t.topic_id != null)
     const lapses = c.lapses ?? 0
+    // T43: real lifetime retention (else forgetting-curve retrievability);
+    // lapse-derived only as a last resort when neither is present.
+    const retention =
+      c.retention ?? c.retrievability ?? Math.min(0.97, Math.max(0.4, 1 - lapses * 0.08))
     return {
       id: `ak-${c.anki_card_id}`,
       front: firstField || c.deck_name,
       node: topicTag?.topic_id ?? null,
-      // no retention column exposed; degrade from lapse count for the viz pill
-      retention: Math.min(0.97, Math.max(0.4, 1 - lapses * 0.08)),
+      retention,
       interval: c.interval_days != null ? `${c.interval_days}d` : '—',
       due: c.queue === 1 || c.queue === 2 || c.queue === 3 ? 'due now' : relTime(c.due_date),
       lapses
@@ -146,17 +167,25 @@ function adaptAnkiQueue(rows: API.AnkiCardOut[]): AnkiCardT[] {
   })
 }
 
-function adaptChoices(raw: unknown, correct: string | null): ChoiceT[] {
+function adaptChoices(
+  raw: unknown,
+  correct: string | null,
+  distribution: Record<string, number>,
+  picked: string | null
+): ChoiceT[] {
   if (!Array.isArray(raw)) return mock.REVIEW_QUESTION.choices
+  const total = Object.values(distribution).reduce((a, b) => a + b, 0)
   return raw.map((c: any, i: number) => {
-    const letter = c?.label ?? c?.letter ?? String.fromCharCode(65 + i)
-    const text = typeof c === 'string' ? c : c?.text ?? c?.value ?? ''
+    // stored choices are {key, html, plain}; tolerate label/letter/text too
+    const letter = String(c?.key ?? c?.label ?? c?.letter ?? String.fromCharCode(65 + i))
+    const text = typeof c === 'string' ? c : c?.plain ?? c?.text ?? c?.value ?? ''
+    const count = distribution[letter] ?? 0
     return {
       letter,
       text,
-      picked: false,
-      correct: correct != null && String(letter) === String(correct),
-      distribution: 0
+      picked: picked != null && letter === String(picked),
+      correct: correct != null && letter === String(correct),
+      distribution: total ? count / total : 0
     }
   })
 }
@@ -171,19 +200,25 @@ function adaptQuestion(
     confidence: t.confidence ?? undefined
   }))
   const node = tags[0]?.node ?? mock.REVIEW_QUESTION.node
+  const history = q.attempt_history ?? []
   return {
     qid: q.qid,
     questionId: q.question_id,
     source: 'uworld',
     testId: '—',
-    attemptedAt: '—',
-    timeSeconds: 0,
+    attemptedAt: history[0] ? relTime(history[0].attempted_at) : '—',
+    timeSeconds: history[0]?.time_seconds ?? 0,
     node,
     flagged: false,
     stem: q.stem,
-    choices: adaptChoices(q.choices, q.correct_choice),
+    choices: adaptChoices(q.choices, q.correct_choice, q.answer_distribution ?? {}, q.picked ?? null),
     explanation: q.explanation ?? '',
-    pastAttempts: [], // no attempt-history endpoint yet
+    pastAttempts: history.map((a) => ({
+      date: fmtAttemptDate(a.attempted_at),
+      correct: a.is_correct,
+      pick: a.selected_choice,
+      time: a.time_seconds ?? 0
+    })),
     tags,
     linkedAnki: adaptAnkiQueue(cards).map((c) => ({
       id: c.id,
@@ -213,6 +248,7 @@ export interface Store {
   loadQuestion: (qid: string) => Promise<ReviewQuestionT | null>
   loadSessionSummary: (testId: string) => Promise<SessionDetailT | null>
   loadSystemStatus: () => Promise<SystemStatusT | null>
+  loadNodeMastery: (nodeId: number) => Promise<NodeMasteryT | null>
   saveDiscriminator: (factor: string, questionId: number, nodeId?: number) => Promise<boolean>
   createCourse: (slug: string, name: string) => Promise<API.ApiCourse | null>
   importOutline: (courseId: number, schema: unknown) => Promise<boolean>
@@ -285,6 +321,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 abbr: course.slug.slice(0, 2).toUpperCase(),
                 nodeCount: outline.length
               }
+              // ¶T7: overlay real per-root mastery (course endpoint, open route)
+              try {
+                const cm = await API.getCourseMastery(course.id)
+                if (cm.nodes.length) {
+                  const m: Record<number, number> = {}
+                  for (const n of cm.nodes) m[n.node_id] = n.accuracy
+                  const withMastery = applyMastery(outline, m)
+                  next.OUTLINE = withMastery
+                  next.NODE_BY_ID = buildNodeIndex(withMastery)
+                  next.nodePath = makeNodePath(next.NODE_BY_ID)
+                  live.add('mastery')
+                }
+              } catch { /* keep 0-mastery */ }
             }
           } catch { /* keep mock outline */ }
         }
@@ -298,7 +347,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           sessions: API.getRecentSessions(5),
           captures: API.getRecentCaptures(8),
           ankiQ: API.getAnkiReviewQueue(),
-          loadCfg: API.getLoadConfig()
+          loadCfg: API.getLoadConfig(),
+          adherence: API.getLoadAdherence()
         })
         if (r.flagged) {
           live.add('flagged')
@@ -324,6 +374,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (r.loadCfg) {
           live.add('anki-load')
           next.TODAY = { ...next.TODAY, ankiTarget: r.loadCfg.daily_card_review_budget }
+        }
+        // T43: real per-day reviewed series for the adherence chart
+        if (r.adherence?.reviewed_series?.length) {
+          live.add('anki-series')
+          next.ANKI_LOAD = r.adherence.reviewed_series.map((d) => d.reviewed)
         }
       }
 
@@ -378,6 +433,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const loadNodeMastery = React.useCallback(async (nodeId: number): Promise<NodeMasteryT | null> => {
+    try {
+      const m = await API.getNodeMastery(nodeId)
+      const byId: Record<number, number> = { [m.node.id]: m.rollup.accuracy }
+      for (const c of m.children) byId[c.node_id] = c.accuracy
+      return { nodeId: m.node.id, accuracy: m.rollup.accuracy, byId }
+    } catch {
+      return null
+    }
+  }, [])
+
   const saveDiscriminator = React.useCallback(
     async (factor: string, questionId: number, nodeId?: number) => {
       try {
@@ -399,7 +465,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [refresh])
 
   const store: Store = {
-    db, status, refresh, loadQuestion, loadSessionSummary, loadSystemStatus, saveDiscriminator, createCourse, importOutline
+    db, status, refresh, loadQuestion, loadSessionSummary, loadSystemStatus, loadNodeMastery,
+    saveDiscriminator, createCourse, importOutline
   }
   return <StoreCtx.Provider value={store}>{children}</StoreCtx.Provider>
 }
