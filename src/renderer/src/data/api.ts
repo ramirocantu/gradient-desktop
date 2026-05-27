@@ -142,7 +142,7 @@ export interface DiscriminatorOut {
 }
 
 // ── reads ──
-export const listCourses = () => api<ApiCourse[]>('/api/v1/courses', { auth: false })
+export const listCourses = () => api<ApiCourse[]>('/api/v1/courses')
 export const getOutlineTree = (course: string) =>
   api<OutlineTreeResp>('/api/v1/tutor/outline', { query: { course } })
 export const getFlagged = (limit = 20) =>
@@ -181,9 +181,9 @@ export interface NodeMastery {
   children: ({ node_id: number; name: string; kind: string; path: string } & MasteryRollup)[]
 }
 export const getCourseMastery = (courseId: number) =>
-  api<CourseMastery>(`/api/v1/outline/courses/${courseId}/mastery`, { auth: false })
+  api<CourseMastery>(`/api/v1/outline/courses/${courseId}/mastery`)
 export const getNodeMastery = (nodeId: number) =>
-  api<NodeMastery>(`/api/v1/outline/nodes/${nodeId}/mastery`, { auth: false })
+  api<NodeMastery>(`/api/v1/outline/nodes/${nodeId}/mastery`)
 
 export interface Healthz {
   db_reachable: boolean
@@ -226,11 +226,11 @@ export const getSystemStatus = () => api<AdminStatus>('/api/v1/admin/status')
 
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>
-  api<ApiCourse>('/api/v1/courses', { method: 'POST', auth: false, body: { slug, name, description } })
+  api<ApiCourse>('/api/v1/courses', { method: 'POST', body: { slug, name, description } })
 export const importOutline = (courseId: number, schema: unknown) =>
   api<{ course: ApiCourse; nodes_imported: number }>(
     `/api/v1/courses/${courseId}/outline:import`,
-    { method: 'POST', auth: false, body: schema }
+    { method: 'POST', body: schema }
   )
 export const saveDiscriminator = (questionId: number, factorText: string, nodeId?: number) =>
   api<DiscriminatorOut>('/api/v1/pkm/discriminators', {
