@@ -384,6 +384,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           live.add('anki-series')
           next.ANKI_LOAD = r.adherence.reviewed_series.map((d) => d.reviewed)
         }
+        // Review resume target: point at a REAL qid (flagged, else recent
+        // capture) so by-qid resolves live — ⊥ the hardcoded mock qid (404).
+        const resumeQid = r.flagged?.[0]?.qid ?? r.captures?.[0]?.qid
+        if (resumeQid) {
+          live.add('review')
+          next.REVIEW_QUESTION = { ...next.REVIEW_QUESTION, qid: resumeQid }
+        }
       }
 
       if (!cancelled) {
