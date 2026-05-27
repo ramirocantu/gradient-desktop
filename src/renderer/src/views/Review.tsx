@@ -5,26 +5,27 @@ import React from 'react'
 import { Icon, KindGlyph } from '../components/primitives'
 import { masteryColor } from '../helpers'
 import { useDB, useStore } from '../data/store'
-import type { ReviewQuestionT, Tweaks } from '../types'
+import { useAsync } from '../data/useAsync'
+import type { Tweaks } from '../types'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
   const db = useDB()
   const { status, loadQuestion, saveDiscriminator } = useStore()
-  const [Q, setQ] = React.useState<ReviewQuestionT>(db.REVIEW_QUESTION)
+
+  // Live question detail when the backend is up; sample question is the instant
+  // fallback so the view is never blank (¶V2). useAsync isolates the fetch.
+  const wantLive = status.online && status.hasToken
+  const live = useAsync(
+    () => (wantLive ? loadQuestion(String(db.REVIEW_QUESTION.qid)) : Promise.resolve(null)),
+    [wantLive, db.REVIEW_QUESTION.qid]
+  )
+  const Q = live.data ?? db.REVIEW_QUESTION
+  const qLoading = wantLive && live.loading
   const node = db.NODE_BY_ID[Q.node]
   const path = db.nodePath(Q.node)
   const layout = tweaks.reviewLayout || 'docked'
-
-  // Pull live question detail for the resume target when the backend is up.
-  React.useEffect(() => {
-    let alive = true
-    if (status.online && status.hasToken) {
-      loadQuestion(String(db.REVIEW_QUESTION.qid)).then((q) => { if (alive && q) setQ(q) })
-    }
-    return () => { alive = false }
-  }, [status.online, status.hasToken, loadQuestion, db.REVIEW_QUESTION.qid])
 
   const [tutorOpen, setTutorOpen] = React.useState(true)
   const [draftFactor, setDraftFactor] = React.useState(
@@ -58,6 +59,7 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
           <span style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
             {Q.attemptedAt}{Q.timeSeconds ? ` · ${Math.floor(Q.timeSeconds / 60)}m ${Q.timeSeconds % 60}s` : ''}
           </span>
+          {qLoading && <span className="skeleton" style={{ width: 96, height: 14, borderRadius: 4 }} title="loading live question" />}
           <span style={{ flex: 1 }} />
           <button className="tb-btn ghost"><Icon name="chevron-u" size={12} /> Prev</button>
           <button className="tb-btn ghost">Next <Icon name="chevron-d" size={12} /></button>

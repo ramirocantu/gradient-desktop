@@ -90,7 +90,7 @@ overlays. Offline fallback stays.
 | T1 | . | map `captures.topics` → node label in `adaptCaptures` (resolve node_id→name via NODE_BY_ID); drop captures sample-badge when live | V3,V9 |
 | T2 | . | wire session node attribution + per-question outcome grid from `…/sessions/{id}/summary` (`by_topic`,`top_topics`, per-attempt correct/flag) | V3,V7 |
 | T3 | . | settings connections panel: drive AnkiConnect/Notion/OpenAI/MCP status from `GET /tutor/healthz` + `/admin/jobs` ⊥ static rows | V3,V7 |
-| T4 | . | add typed `useAsync` + per-view loading skeletons; per-domain failure isolated (`allSettled`) ⊥ block app | V2,V7 |
+| T4 | x | add typed `useAsync` + per-view loading skeletons; per-domain failure isolated (`allSettled`) ⊥ block app | V2,V7 |
 | T5 | . | Review: replace sample `picked`/`distribution`/`pastAttempts` with live — backend adds distribution + attempt-history to `by-qid` (?) | V3,V6 |
 | T6 | . | Anki: consume real retention col + per-day load series from extended `/anki/load-adherence` (?) ⊥ lapse-derived retention + sampled `ANKI_LOAD` | V3,V6 |
 | T7 | . | Mastery: replace `pseudoMastery` overlay with per-node/subtree rollup endpoint (?) (backend unfence analytics, V-O1 set rollup); remove mastery sample-badge | V6,V9,V4 |

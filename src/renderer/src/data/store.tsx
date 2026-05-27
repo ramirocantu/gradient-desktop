@@ -2,6 +2,7 @@ import React from 'react'
 import * as mock from './mock'
 import * as API from './api'
 import { ApiError, cfg } from './client'
+import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, pseudoMastery, deriveAbbr } from '../helpers'
 import type {
   DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT
@@ -248,39 +249,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       } catch { /* backend down — stay on mock, online=false */ }
 
-      // token-gated reads (best-effort, independent) ───────────────────────
+      // token-gated reads — concurrent + isolated (¶V7): one failing read
+      // never drops the others (settleAll maps rejected → undefined).
       if (online && cfg.coachToken) {
-        const [flagged, sessions, captures, ankiQ, loadCfg] = await Promise.allSettled([
-          API.getFlagged(20),
-          API.getRecentSessions(5),
-          API.getRecentCaptures(8),
-          API.getAnkiReviewQueue(),
-          API.getLoadConfig()
-        ])
-        if (flagged.status === 'fulfilled') {
+        const r = await settleAll({
+          flagged: API.getFlagged(20),
+          sessions: API.getRecentSessions(5),
+          captures: API.getRecentCaptures(8),
+          ankiQ: API.getAnkiReviewQueue(),
+          loadCfg: API.getLoadConfig()
+        })
+        if (r.flagged) {
           live.add('flagged')
-          next.TODAY = { ...next.TODAY, flaggedCount: flagged.value.length }
+          next.TODAY = { ...next.TODAY, flaggedCount: r.flagged.length }
         }
-        if (sessions.status === 'fulfilled' && sessions.value.length) {
+        if (r.sessions?.length) {
           live.add('sessions')
-          next.SESSIONS = adaptSessions(sessions.value)
+          next.SESSIONS = adaptSessions(r.sessions)
         }
-        if (captures.status === 'fulfilled' && captures.value.length) {
+        if (r.captures?.length) {
           live.add('captures')
-          next.CAPTURES = adaptCaptures(captures.value)
+          next.CAPTURES = adaptCaptures(r.captures)
           next.TODAY = {
             ...next.TODAY,
             capturesAwaiting: next.CAPTURES.filter((c) => c.status === 'uncategorized').length
           }
         }
-        if (ankiQ.status === 'fulfilled' && ankiQ.value.length) {
+        if (r.ankiQ?.length) {
           live.add('anki')
-          next.ANKI_QUEUE = adaptAnkiQueue(ankiQ.value)
-          next.TODAY = { ...next.TODAY, ankiDue: ankiQ.value.length }
+          next.ANKI_QUEUE = adaptAnkiQueue(r.ankiQ)
+          next.TODAY = { ...next.TODAY, ankiDue: r.ankiQ.length }
         }
-        if (loadCfg.status === 'fulfilled') {
+        if (r.loadCfg) {
           live.add('anki-load')
-          next.TODAY = { ...next.TODAY, ankiTarget: loadCfg.value.daily_card_review_budget }
+          next.TODAY = { ...next.TODAY, ankiTarget: r.loadCfg.daily_card_review_budget }
         }
       }
 
