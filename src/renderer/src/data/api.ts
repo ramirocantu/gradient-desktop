@@ -42,9 +42,18 @@ export interface RecentSession {
   ended_at: string | null
 }
 
+export interface ByTopic {
+  node_id: number
+  name: string
+  path: string
+  kind: string
+  attempt_count: number
+  correct_count: number
+  accuracy: number
+}
 export interface SessionSummary extends RecentSession {
-  by_topic: Record<string, unknown>
-  top_topics: unknown[]
+  by_topic: ByTopic[]
+  top_topics: ByTopic[]
   flagged_attempts: { attempt_id: number; qid: string; stem_preview: string }[]
   notes: unknown[]
 }

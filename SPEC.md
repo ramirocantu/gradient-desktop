@@ -83,13 +83,14 @@ overlays. Offline fallback stays.
 - Backend deps block P2–P4. Owned by `../SPEC.md`: unfence analytics (backend T17), KB substrate models+migrations (T24), KB service seams (T26), retrieval+grounded gen (T28–T30). Desktop tasks here cite the missing endpoint, not the backend impl.
 - Packaged-app CORS (`file://`) unresolved — dev only for now.
 - Tutor chat is mocked dialogue (`TUTOR_MESSAGES`); discriminator save already live.
+- Session per-question outcome grid stays sampled (badged): `sessions/{id}/summary` returns aggregates + flagged list, no per-attempt correctness array. Needs a backend per-attempt endpoint (future `../SPEC.md` task) to go live.
 
 ## ¶T
 
 | id | st | goal | cites |
 |----|----|------|-------|
-| T1 | ~ | map `captures.topics` → node label in `adaptCaptures` (resolve node_id→name via NODE_BY_ID); drop captures sample-badge when live. Client adapter done (`firstTopicNodeId`); flows once backend T38 returns node_id (¶B1,¶V10) | V3,V9,?backend-T38 |
-| T2 | . | wire session node attribution + per-question outcome grid from `…/sessions/{id}/summary` (`by_topic`,`top_topics`, per-attempt correct/flag). Blocked: by_topic empty + no per-attempt array (¶B1) | V3,V7,?backend-T38 |
+| T1 | x | map `captures.topics` → node label in `adaptCaptures` (`firstTopicNodeId` reads node_id); flows now backend T38 returns `{node_id,name,path,kind}` (¶B1,¶V10) | V3,V9,backend-T38 |
+| T2 | x | session node attribution live from `…/sessions/{id}/summary` `by_topic` → counts/accuracy/flagged/coverage + Node-coverage MasteryBars (V-O1 rollup). Per-question grid stays sampled+badged — no per-attempt feed (¶O) | V3,V7,backend-T38 |
 | T3 | . | settings connections panel: drive AnkiConnect/Notion/OpenAI/MCP status from `GET /tutor/healthz` + `/admin/jobs` ⊥ static rows | V3,V7 |
 | T4 | x | add typed `useAsync` + per-view loading skeletons; per-domain failure isolated (`allSettled`) ⊥ block app | V2,V7 |
 | T5 | . | Review: replace sample `picked`/`distribution`/`pastAttempts` with live — backend adds distribution + attempt-history to `by-qid` (?) | V3,V6 |

@@ -97,6 +97,18 @@ export interface SessionT {
   node: number
 }
 
+// Live session-summary detail (¶T2), adapted from /tutor/sessions/{id}/summary.
+// byTopic rows feed MasteryViz/MasteryBars directly.
+export interface SessionDetailT {
+  testId: string
+  attempts: number
+  correct: number
+  accuracy: number
+  flaggedCount: number
+  byTopic: { id: number; name: string; mastery: number; items: number; abbr?: string }[]
+  topicCount: number
+}
+
 export interface PdfT {
   id: string
   filename: string

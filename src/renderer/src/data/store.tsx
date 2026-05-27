@@ -5,7 +5,7 @@ import { ApiError, cfg } from './client'
 import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, pseudoMastery, deriveAbbr } from '../helpers'
 import type {
-  DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT
+  DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT
 } from '../types'
 
 // ───────────────────────── relative-time helper ─────────────────────────
@@ -91,6 +91,25 @@ function firstTopicNodeId(topics: unknown): number | null {
     }
   }
   return null
+}
+
+function adaptSessionSummary(s: API.SessionSummary): SessionDetailT {
+  return {
+    testId: s.test_id,
+    attempts: s.attempt_count,
+    correct: s.correct_count,
+    accuracy: s.accuracy,
+    flaggedCount: s.flagged_attempts.length,
+    // by_topic carries node label + per-node rollup (¶T2, V-O1) — feeds MasteryBars
+    byTopic: s.by_topic.map((t) => ({
+      id: t.node_id,
+      name: t.name,
+      mastery: t.accuracy,
+      items: t.attempt_count,
+      abbr: deriveAbbr(t.name)
+    })),
+    topicCount: s.by_topic.length
+  }
 }
 
 function adaptSessions(rows: API.RecentSession[]): SessionT[] {
@@ -191,6 +210,7 @@ export interface Store {
   status: Status
   refresh: () => void
   loadQuestion: (qid: string) => Promise<ReviewQuestionT | null>
+  loadSessionSummary: (testId: string) => Promise<SessionDetailT | null>
   saveDiscriminator: (factor: string, questionId: number, nodeId?: number) => Promise<boolean>
   createCourse: (slug: string, name: string) => Promise<API.ApiCourse | null>
   importOutline: (courseId: number, schema: unknown) => Promise<boolean>
@@ -333,6 +353,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const loadSessionSummary = React.useCallback(async (testId: string) => {
+    try {
+      return adaptSessionSummary(await API.getSessionSummary(testId))
+    } catch {
+      return null
+    }
+  }, [])
+
   const saveDiscriminator = React.useCallback(
     async (factor: string, questionId: number, nodeId?: number) => {
       try {
@@ -354,7 +382,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [refresh])
 
   const store: Store = {
-    db, status, refresh, loadQuestion, saveDiscriminator, createCourse, importOutline
+    db, status, refresh, loadQuestion, loadSessionSummary, saveDiscriminator, createCourse, importOutline
   }
   return <StoreCtx.Provider value={store}>{children}</StoreCtx.Provider>
 }

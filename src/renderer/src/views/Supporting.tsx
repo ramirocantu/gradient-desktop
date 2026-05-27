@@ -2,6 +2,7 @@ import React from 'react'
 import { Icon, KindGlyph, StatCard, MasteryBars } from '../components/primitives'
 import { masteryColor } from '../helpers'
 import { useDB, useStore } from '../data/store'
+import { useAsync } from '../data/useAsync'
 import type { View } from '.'
 
 // ───────────────────────── ATOMIC FACTS ─────────────────────────
@@ -253,30 +254,57 @@ export function NotionView() {
 // ───────────────────────── SESSION SUMMARY ─────────────────────────
 export function SessionView() {
   const db = useDB()
+  const { status, loadSessionSummary } = useStore()
   const s = db.SESSIONS[0]
+  const wantLive = status.online && status.hasToken
+
+  // Live session summary (¶T2): counts + accuracy + flagged + per-node rollup.
+  const live = useAsync(
+    () => (wantLive ? loadSessionSummary(s.id) : Promise.resolve(null)),
+    [wantLive, s.id]
+  )
+  const d = live.data
+  const loading = wantLive && live.loading
+  const testId = d?.testId ?? s.id
+  const attempts = d?.attempts ?? s.items
+  const correct = d?.correct ?? s.correct
+  const accuracy = d ? d.accuracy : (s.items ? s.correct / s.items : 0)
+  const flaggedCount = d?.flaggedCount ?? 6
+  const topicCount = d?.topicCount ?? 11
+  // by_topic rows feed MasteryBars directly; fall back to sample nodes offline.
+  const coverageRows = d?.byTopic?.length
+    ? d.byTopic
+    : db.OUTLINE.filter((n) => [11, 12, 114, 1143, 1144].includes(n.id))
+
   return (
     <div className="content-scroll">
-      <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginBottom: 4 }}>Session · {s.id}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <span style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>Session · {testId}</span>
+        {loading && <span className="skeleton" style={{ width: 70, height: 12, borderRadius: 4 }} />}
+      </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
         <div style={{ flex: 1 }}>
-          <h1 className="h1">{s.items} questions · {s.correct} correct</h1>
+          <h1 className="h1">{attempts} questions · {correct} correct</h1>
           <p className="lede" style={{ marginTop: 6 }}>{s.date} · {s.time} wall-clock · {s.source} <span className="badge slate" style={{ marginLeft: 4 }}><span className="d" />{s.source}</span></p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="tb-btn ghost">Export to Notion</button>
-          <button className="tb-btn primary">Review flagged · 6</button>
+          <button className="tb-btn primary">Review flagged · {flaggedCount}</button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 22 }}>
-        <StatCard label="Score" value={`${Math.round((s.correct / s.items) * 100)}%`} accent="moss" footer={<div style={{ height: 4, borderRadius: 999, background: 'var(--m0)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${(s.correct / s.items) * 100}%`, background: 'var(--moss)' }} /></div>} />
-        <StatCard label="Flagged" value="6" accent="clay" sub="for review" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="tnum">4</span> wrong · <span className="tnum">2</span> guessed right</div>} />
-        <StatCard label="Coverage" value="11" accent="slate" sub="nodes touched" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>Across FC 1 · FC 2 · 6 topics</div>} />
-        <StatCard label="New connections" value="4" accent="plum" sub="discovered" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>From categorizer · all conf &gt; 0.8</div>} />
+        <StatCard label="Score" value={`${Math.round(accuracy * 100)}%`} accent="moss" footer={<div style={{ height: 4, borderRadius: 999, background: 'var(--m0)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${accuracy * 100}%`, background: 'var(--moss)' }} /></div>} />
+        <StatCard label="Flagged" value={flaggedCount} accent="clay" sub="for review" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>from attempt notes</div>} />
+        <StatCard label="Coverage" value={topicCount} accent="slate" sub="nodes touched" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>subtree-rolled per V-O1</div>} />
+        <StatCard label="New connections" value="4" accent="plum" sub="discovered" footer={<div style={{ display: 'flex', alignItems: 'center', gap: 6, font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="stub-badge">sample</span> concept_edges P2</div>} />
       </div>
 
       <div style={{ marginTop: 28 }}>
-        <h3 className="section-title">Per-question outcome</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <h3 className="section-title" style={{ margin: 0 }}>Per-question outcome</h3>
+          <span className="stub-badge" title="no per-attempt correctness feed yet — summary returns aggregates only">sample grid</span>
+        </div>
         <div className="card" style={{ padding: '14px 16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(28, 1fr)', gap: 4, marginBottom: 10 }}>
             {Array.from({ length: 28 }, (_, i) => {
@@ -298,9 +326,9 @@ export function SessionView() {
       </div>
 
       <div style={{ marginTop: 24 }}>
-        <h3 className="section-title">Node coverage</h3>
+        <h3 className="section-title">Node coverage{d?.byTopic?.length ? ` · ${d.byTopic.length} nodes` : ''}</h3>
         <div className="card" style={{ padding: '14px 16px' }}>
-          <MasteryBars rows={db.OUTLINE.filter((n) => [11, 12, 114, 1143, 1144].includes(n.id))} />
+          <MasteryBars rows={coverageRows} />
         </div>
       </div>
     </div>
