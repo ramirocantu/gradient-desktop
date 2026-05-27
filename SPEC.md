@@ -68,10 +68,11 @@ overlays. Offline fallback stays.
 - V7: token-gated reads degrade independently (`Promise.allSettled`). One 401/500 ⊥ blank whole app.
 - V8: apiBase + coachToken + courseSlug from env/preload. ⊥ hardcode in renderer.
 - V9: each domain swapped live ⇒ its `stub-badge` removed same change. ⊥ domain both live + badged.
+- V10: a ¶T marked "no backend change" must consume a field an existing endpoint actually **populates**. ⊥ assume TODO-stubbed / empty payload fields (e.g. `captures.topics`, session `by_topic`). Verify payload non-empty before tagging buildable-now. (¶B1)
 
 ## ¶P
 
-- P1 — wire surfaces backed by existing endpoints fully (sessions node attr, captures node labels, settings status). No backend change.
+- P1 — wire surfaces backed by existing endpoints. NOTE (¶B1): captures node labels + session node attr need backend node-tag surfacing (backend T38) — not no-backend as first scoped; client adapter forward-compatible meanwhile. Settings status partly available now.
 - P2 — enrich question + anki (distribution, attempt history, retention col, daily load series) — needs small backend extensions.
 - P3 — mastery: unfence/expose analytics rollup → wire; drop mastery sample-badge.
 - P4 — KB stubs: concept_edges / atomic_facts / notion_pages / pdf_sources reads (after backend P2/P3) → wire.
@@ -87,8 +88,8 @@ overlays. Offline fallback stays.
 
 | id | st | goal | cites |
 |----|----|------|-------|
-| T1 | . | map `captures.topics` → node label in `adaptCaptures` (resolve node_id→name via NODE_BY_ID); drop captures sample-badge when live | V3,V9 |
-| T2 | . | wire session node attribution + per-question outcome grid from `…/sessions/{id}/summary` (`by_topic`,`top_topics`, per-attempt correct/flag) | V3,V7 |
+| T1 | ~ | map `captures.topics` → node label in `adaptCaptures` (resolve node_id→name via NODE_BY_ID); drop captures sample-badge when live. Client adapter done (`firstTopicNodeId`); flows once backend T38 returns node_id (¶B1,¶V10) | V3,V9,?backend-T38 |
+| T2 | . | wire session node attribution + per-question outcome grid from `…/sessions/{id}/summary` (`by_topic`,`top_topics`, per-attempt correct/flag). Blocked: by_topic empty + no per-attempt array (¶B1) | V3,V7,?backend-T38 |
 | T3 | . | settings connections panel: drive AnkiConnect/Notion/OpenAI/MCP status from `GET /tutor/healthz` + `/admin/jobs` ⊥ static rows | V3,V7 |
 | T4 | x | add typed `useAsync` + per-view loading skeletons; per-domain failure isolated (`allSettled`) ⊥ block app | V2,V7 |
 | T5 | . | Review: replace sample `picked`/`distribution`/`pastAttempts` with live — backend adds distribution + attempt-history to `by-qid` (?) | V3,V6 |
@@ -105,4 +106,5 @@ overlays. Offline fallback stays.
 ## ¶B
 
 | id | date | cause | fix |
+| B1 | 2026-05-27 | ¶T1/¶T2 scoped "no backend change" but the fields they consume are empty TODO stubs in the backend — `captures.topics` always `[]` (`app/services/tutor/captures.py:30`), session `by_topic`/`top_topics` always `[]` (`sessions.py:85`), and summary has no per-attempt correctness array. Found at build plan time, not test time. | Added ¶V10 (verify payload populated before tagging no-backend). Client adapter `firstTopicNodeId` made forward-compatible (accepts id / `{node_id}` / `{id}`); ¶T1 held at `~`. Backend surfacing tracked in `../SPEC.md` T38. ¶T1/¶T2 cites now flag `?backend-T38`. |
 |----|------|-------|-----|

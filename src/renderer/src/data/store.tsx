@@ -60,18 +60,37 @@ function adaptOutline(resp: API.OutlineTreeResp): OutlineNodeT[] {
 
 function adaptCaptures(rows: API.RecentCapture[]): CaptureT[] {
   return rows.map((r) => {
-    const tagged = Array.isArray(r.topics) && r.topics.length > 0
+    const node = firstTopicNodeId(r.topics)
+    const tagged = node != null
     return {
       id: `c-${r.attempt_id}`,
       source: r.uworld_test_id ? 'uworld' : 'manual',
       title: r.stem_preview ? `Q · ${r.qid} · ${r.stem_preview.slice(0, 28)}` : `Q · ${r.qid}`,
-      node: null,
+      // resolved to a node label in the view via NODE_BY_ID (¶T1)
+      node,
       attemptedAt: relTime(r.attempted_at),
       isCorrect: r.is_correct,
       flagged: r.flagged,
       status: tagged ? 'categorized' : r.flagged ? 'needs-review' : 'uncategorized'
     }
   })
+}
+
+// Pull a node id out of a capture's `topics` entry. The backend payload shape
+// here is not yet finalized (currently an empty list — see note in the build
+// report), so accept the plausible forms: a bare node id, or an object
+// carrying `node_id` / `id`. Returns null when no id is resolvable.
+function firstTopicNodeId(topics: unknown): number | null {
+  if (!Array.isArray(topics)) return null
+  for (const t of topics) {
+    if (typeof t === 'number' && Number.isFinite(t)) return t
+    if (t && typeof t === 'object') {
+      const o = t as Record<string, unknown>
+      const id = o.node_id ?? o.id
+      if (typeof id === 'number' && Number.isFinite(id)) return id
+    }
+  }
+  return null
 }
 
 function adaptSessions(rows: API.RecentSession[]): SessionT[] {
