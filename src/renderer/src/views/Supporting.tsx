@@ -233,6 +233,7 @@ export function PdfsView() {
 // ───────────────────────── NOTION ─────────────────────────
 export function NotionView() {
   const db = useDB()
+  const { status } = useStore()
   return (
     <div className="content-scroll">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
@@ -241,7 +242,9 @@ export function NotionView() {
           <p className="lede" style={{ marginTop: 6, maxWidth: 580 }}>One Notion page per outline node. Atomic facts and discriminators appear as blocks within the node's page. One-way sync; this app never reads Notion content back.</p>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span className="stub-badge" title="NotionPage model exists; sync workflow is P2">no endpoint</span>
+          {status.live.has('notion')
+            ? <span className="badge moss" style={{ height: 18, padding: '0 6px' }}><span className="d" />live</span>
+            : <span className="stub-badge" title="notion_pages pointer-index read endpoint (T47)">no endpoint</span>}
           <StubButton name="notion-sync-queue" className="tb-btn ghost">Sync queue</StubButton>
         </div>
       </div>
@@ -261,7 +264,7 @@ export function NotionView() {
           <span style={{ textAlign: 'right' }}>Last synced</span>
           <span />
         </div>
-        {db.NOTION_PAGES.length === 0 && <EmptyState text="No Notion pages" hint="notion_pages endpoint pending (P2)" />}
+        {db.NOTION_PAGES.length === 0 && <EmptyState text="No Notion pages" hint={status.live.has('notion') ? 'no pages synced yet — run the Notion write-out' : 'backend offline'} />}
         {db.NOTION_PAGES.map((p, i) => {
           const node = db.NODE_BY_ID[p.node]
           return (
@@ -273,7 +276,7 @@ export function NotionView() {
                   <div style={{ font: '500 11px var(--sans)', color: 'var(--ink-3)' }}>{node ? db.nodePath(p.node).join(' › ') : '—'}</div>
                 </div>
               </div>
-              <span className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink-2)', textAlign: 'right' }}>{p.blocks}</span>
+              <span className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink-2)', textAlign: 'right' }} title="block_count not modeled on notion_pages (§I)">{p.blocks || '—'}</span>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <span className={`badge ${p.status === 'synced' ? 'moss' : 'amber'}`} style={{ height: 18, padding: '0 6px' }}><span className="d" />{p.status}</span>
               </div>

@@ -5,7 +5,7 @@ import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
 import type {
   DB, Course, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
-  SystemStatusT, NodeMasteryT, TodayT, ConnectionT, FactT
+  SystemStatusT, NodeMasteryT, TodayT, ConnectionT, FactT, NotionPageT
 } from '../types'
 
 // ───────────────────────── empty base (⊥ mock) ─────────────────────────
@@ -194,6 +194,21 @@ function adaptFacts(rows: API.AtomicFactOut[]): FactT[] {
     pdf: pdfStem(f.pdf_source.filename, f.pdf_source.id),
     page: f.page ?? 0,
     version: '—'
+  }))
+}
+
+// ¶T10: notion_pages pointer index → NotionPageT. `status` is derived from
+// last_synced_at (no status column, §I); `blocks` (block_count) is not modeled
+// → 0, rendered as "—" by the view (⊥ fabricate a count).
+function adaptNotionPages(rows: API.NotionPageOut[], byId: Record<number, OutlineNodeT>): NotionPageT[] {
+  return rows.map((p) => ({
+    id: `np-${p.node_id}`,
+    node: p.node_id,
+    title: p.title ?? byId[p.node_id]?.name ?? `node ${p.node_id}`,
+    blocks: 0,
+    lastSynced: relTime(p.last_synced_at),
+    status: p.last_synced_at ? 'synced' : 'pending',
+    url: p.url ?? null
   }))
 }
 
@@ -410,7 +425,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           loadCfg: API.getLoadConfig(),
           adherence: API.getLoadAdherence(),
           edges: API.getConceptEdges({ limit: 50 }),
-          facts: API.getAtomicFacts({ limit: 200 })
+          facts: API.getAtomicFacts({ limit: 200 }),
+          notionPages: API.getNotionPages()
         })
         if (r.flagged) {
           live.add('flagged')
@@ -470,6 +486,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           live.add('facts')
           next.FACTS = adaptFacts(r.facts)
           next.COURSE = { ...next.COURSE, factCount: r.facts.length }
+        }
+        // ¶T10: notion_pages pointer index (live, even when empty → ⊥ keep mock).
+        if (r.notionPages !== undefined) {
+          live.add('notion')
+          next.NOTION_PAGES = adaptNotionPages(r.notionPages, next.NODE_BY_ID)
+          next.COURSE = { ...next.COURSE, notionPageCount: r.notionPages.length }
         }
       }
 

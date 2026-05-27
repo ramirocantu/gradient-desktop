@@ -249,6 +249,19 @@ export interface AtomicFactOut {
 export const getAtomicFacts = (params: { node_id?: number; pdf_source_id?: number; limit?: number } = {}) =>
   api<AtomicFactOut[]>('/api/v1/atomic-facts', { query: params })
 
+export interface NotionPageOut {
+  node_id: number
+  title: string | null // outline node name (no local Notion content copy, V-N1)
+  url: string
+  notion_page_id: string
+  tags: unknown[] | null
+  last_synced_at: string | null
+  // NOTE: block_count / status are not modeled on notion_pages (§I); status is
+  // derived client-side from last_synced_at, block_count is unknown.
+}
+export const getNotionPages = (params: { node_id?: number } = {}) =>
+  api<NotionPageOut[]>('/api/v1/notion/pages', { query: params })
+
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>
   api<ApiCourse>('/api/v1/courses', { method: 'POST', body: { slug, name, description } })
