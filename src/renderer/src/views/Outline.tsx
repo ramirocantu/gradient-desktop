@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, KindGlyph, MasteryViz, MasteryBars, LinkRail } from '../components/primitives'
+import { Icon, KindGlyph, MasteryViz, MasteryBars, LinkRail, EmptyState, StubButton } from '../components/primitives'
 import { masteryColor, masteryLabel } from '../helpers'
 import { useDB, useStore } from '../data/store'
 import { useAsync } from '../data/useAsync'
@@ -41,6 +41,19 @@ export function OutlineView({ tweaks, setView }: { tweaks: Tweaks; setView: (v: 
   const liveMast = nm.data?.byId ?? {}
   const mast = (id: number, fallback: number) => liveMast[id] ?? fallback
   const subtreeChildren = childrenOf(selected).map((c) => ({ ...c, mastery: mast(c.id, c.mastery) }))
+
+  // Empty base / offline → no outline. Render an honest empty-state (⊥ crash on
+  // undefined `sel`, ⊥ sample tree).
+  if (rootNodes.length === 0 || !sel) {
+    return (
+      <div className="content-scroll">
+        <h1 className="h1">Outline</h1>
+        <div className="card" style={{ marginTop: 20 }}>
+          <EmptyState text="No outline loaded" hint="import a course outline (Settings → Add a course) or start the backend" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
@@ -93,8 +106,8 @@ export function OutlineView({ tweaks, setView }: { tweaks: Tweaks; setView: (v: 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="tb-btn ghost"><Icon name="external" size={11} /> Open in Notion</button>
-            <button className="tb-btn primary"><Icon name="spark" size={11} color="var(--canvas)" /> Study this</button>
+            <StubButton name="node-open-in-notion" className="tb-btn ghost"><Icon name="external" size={11} /> Open in Notion</StubButton>
+            <StubButton name="node-study-this" className="tb-btn primary"><Icon name="spark" size={11} color="var(--canvas)" /> Study this</StubButton>
           </div>
         </div>
 
@@ -132,11 +145,11 @@ function NodeItemsTabs() {
   const db = useDB()
   const [tab, setTab] = React.useState('questions')
   const tabs = [
-    { id: 'questions', label: 'Questions', count: 12 },
-    { id: 'anki', label: 'Anki cards', count: 38 },
-    { id: 'facts', label: 'Atomic facts', count: 9 },
-    { id: 'discrim', label: 'Discriminators', count: 4 },
-    { id: 'links', label: 'Linked nodes', count: 6 }
+    { id: 'questions', label: 'Questions', count: 0 },
+    { id: 'anki', label: 'Anki cards', count: db.ANKI_QUEUE.length },
+    { id: 'facts', label: 'Atomic facts', count: db.FACTS.length },
+    { id: 'discrim', label: 'Discriminators', count: db.DISCRIMINATORS.length },
+    { id: 'links', label: 'Linked nodes', count: db.CONNECTIONS.length }
   ]
   return (
     <div style={{ marginTop: 28 }}>
@@ -153,44 +166,28 @@ function NodeItemsTabs() {
         {tab === 'anki' && <NodeAnkiList />}
         {tab === 'facts' && <NodeFactsList />}
         {tab === 'discrim' && <NodeDiscriminatorsList />}
-        {tab === 'links' && <LinkRail items={db.CONNECTIONS} />}
+        {tab === 'links' && (db.CONNECTIONS.length === 0
+          ? <div className="card"><EmptyState text="No linked nodes" hint="concept_edges endpoint pending (P2)" /></div>
+          : <LinkRail items={db.CONNECTIONS} />)}
       </div>
     </div>
   )
 }
 
 function NodeQuestionsList() {
-  const rows = [
-    { qid: 12420, stem: 'Net ATP from palmitate β-oxidation (with malate-aspartate)', mastery: 0.33, attempts: 3, correct: 1, flagged: true },
-    { qid: 12388, stem: 'Activation cost of fatty acid → acyl-CoA — net ATP impact', mastery: 0.55, attempts: 2, correct: 1, flagged: false },
-    { qid: 12015, stem: 'Beta-oxidation enzyme cascade: thiolase regulation', mastery: 0.78, attempts: 4, correct: 3, flagged: false },
-    { qid: 11988, stem: 'Carnitine shuttle: CPT-I/CPT-II tissue specificity', mastery: 0.42, attempts: 2, correct: 1, flagged: true },
-    { qid: 11801, stem: 'Ketogenesis pathway: acetyl-CoA → acetoacetate', mastery: 0.61, attempts: 3, correct: 2, flagged: false }
-  ]
+  // No per-node questions endpoint yet — honest empty-state (⊥ sample rows).
   return (
     <div className="card" style={{ overflow: 'hidden' }}>
-      {rows.map((r, i) => (
-        <div key={r.qid} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px 70px 80px', padding: '12px 16px', alignItems: 'center', gap: 12, borderBottom: i === rows.length - 1 ? 'none' : '0.5px solid var(--hair-2)', cursor: 'pointer' }}>
-          <span className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink)' }}>#{r.qid}</span>
-          <span style={{ font: '400 14px var(--serif)', color: 'var(--ink)' }}>{r.stem}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 32, height: 4, borderRadius: 999, background: 'var(--m0)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${r.mastery * 100}%`, background: masteryColor(r.mastery) }} />
-            </div>
-            <span className="mono" style={{ font: '500 11px var(--mono)', color: 'var(--ink-3)' }}>{Math.round(r.mastery * 100)}%</span>
-          </div>
-          <span className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink-2)', textAlign: 'right' }}>{r.correct}/{r.attempts}</span>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            {r.flagged && <span className="badge flagged" style={{ height: 18, padding: '0 6px' }}><span className="d" />flagged</span>}
-          </div>
-        </div>
-      ))}
+      <EmptyState text="No questions for this node" hint="per-node question listing endpoint pending" />
     </div>
   )
 }
 
 function NodeAnkiList() {
   const db = useDB()
+  if (db.ANKI_QUEUE.length === 0) {
+    return <div className="card"><EmptyState text="No Anki cards" hint="sync cards via AnkiConnect" /></div>
+  }
   return (
     <div className="card" style={{ padding: 4 }}>
       {db.ANKI_QUEUE.slice(0, 5).map((c, i) => (
@@ -208,6 +205,9 @@ function NodeAnkiList() {
 
 export function NodeFactsList() {
   const db = useDB()
+  if (db.FACTS.length === 0) {
+    return <div className="card"><EmptyState text="No atomic facts" hint="PDF-ingest / atomic-fact endpoint pending (P2)" /></div>
+  }
   return (
     <div className="card" style={{ padding: 4 }}>
       {db.FACTS.map((f, i) => (
@@ -223,6 +223,9 @@ export function NodeFactsList() {
 
 function NodeDiscriminatorsList() {
   const db = useDB()
+  if (db.DISCRIMINATORS.length === 0) {
+    return <div className="card"><EmptyState text="No discriminators" hint="discriminator listing endpoint pending (P2)" /></div>
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {db.DISCRIMINATORS.map((d) => (
@@ -241,31 +244,35 @@ function NodeDiscriminatorsList() {
 
 export function NodeDetailView() {
   const db = useDB()
-  const id = db.OUTLINE.find((n) => n.current)?.id ?? 1144
-  const sel = db.NODE_BY_ID[id] ?? db.OUTLINE[0]
+  const sel = db.OUTLINE.find((n) => n.current) ?? db.OUTLINE[0]
+  if (!sel) {
+    return (
+      <div className="content-scroll">
+        <h1 className="h1">Node</h1>
+        <div className="card" style={{ marginTop: 20 }}>
+          <EmptyState text="No node selected" hint="browse the outline to open a node" />
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="content-scroll">
       <NodeBreadcrumbs id={sel.id} />
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginTop: 8 }}>
         <div style={{ flex: 1 }}>
           <h1 className="h1">{sel.name}</h1>
-          <p className="lede" style={{ marginTop: 10, maxWidth: 640 }}>
-            Catabolism of fatty acids in the mitochondrial matrix, oxidizing acyl-CoA two carbons at a time to acetyl-CoA. Linked to{' '}
-            <span style={{ color: 'var(--clay)', borderBottom: '0.5px solid var(--clay)' }}>1143 Lipids</span>,{' '}
-            <span style={{ color: 'var(--clay)', borderBottom: '0.5px solid var(--clay)' }}>114 Bioenergetics</span>.
-          </p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="tb-btn ghost"><Icon name="external" size={11} /> Notion</button>
-          <button className="tb-btn primary"><Icon name="spark" size={11} color="var(--canvas)" /> Study</button>
+          <StubButton name="node-open-in-notion" className="tb-btn ghost"><Icon name="external" size={11} /> Notion</StubButton>
+          <StubButton name="node-study-this" className="tb-btn primary"><Icon name="spark" size={11} color="var(--canvas)" /> Study</StubButton>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 22 }}>
         <MiniStat label="Mastery" value={`${Math.round(sel.mastery * 100)}%`} hint={masteryLabel(sel.mastery)} fill={masteryColor(sel.mastery)} />
-        <MiniStat label="Questions" value="12" hint="3 flagged · 8 attempted" />
-        <MiniStat label="Anki cards" value="38" hint="22 mature · 4 leech" />
-        <MiniStat label="Atomic facts" value="9" hint="from 2 PDFs · all tagged" />
+        <MiniStat label="Questions" value="—" hint="endpoint pending" />
+        <MiniStat label="Anki cards" value={String(db.ANKI_QUEUE.length)} hint="in review queue" />
+        <MiniStat label="Atomic facts" value="—" hint="endpoint pending (P2)" />
       </div>
 
       <NodeItemsTabs />

@@ -2,7 +2,7 @@
 // the load-bearing PKM loop. Question detail is fetched live when the backend
 // is up; the discriminator "Save" is a real POST /api/v1/pkm/discriminators.
 import React from 'react'
-import { Icon, KindGlyph } from '../components/primitives'
+import { Icon, KindGlyph, EmptyState, StubButton } from '../components/primitives'
 import { masteryColor } from '../helpers'
 import { useDB, useStore } from '../data/store'
 import { useAsync } from '../data/useAsync'
@@ -28,9 +28,7 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
   const layout = tweaks.reviewLayout || 'docked'
 
   const [tutorOpen, setTutorOpen] = React.useState(true)
-  const [draftFactor, setDraftFactor] = React.useState(
-    'I conflated the +2.5 vs +1.5 ATP yield for cytosolic NADH — only the malate-aspartate shuttle gives 2.5.'
-  )
+  const [draftFactor, setDraftFactor] = React.useState('')
   const [saveState, setSaveState] = React.useState<SaveState>('idle')
 
   const onSave = React.useCallback(async () => {
@@ -48,6 +46,22 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
     <TutorPane draftFactor={draftFactor} setDraftFactor={setDraftFactor} onClose={() => setTutorOpen(false)} layout={layout} onSave={onSave} saveState={saveState} nodeName={node?.name ?? 'node'} />
   )
 
+  // No live question to show (offline / no flagged target / failed load) →
+  // honest empty-state, ⊥ blank stem or sample question.
+  if (!Q.qid || (!Q.stem && !qLoading)) {
+    return (
+      <div className="content-scroll">
+        <h1 className="h1">Review</h1>
+        <div className="card" style={{ marginTop: 20 }}>
+          <EmptyState
+            text="No question loaded"
+            hint={status.online ? 'flag an attempt to add it to the review queue' : 'backend offline — start the API to load questions'}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
@@ -61,8 +75,8 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
           </span>
           {qLoading && <span className="skeleton" style={{ width: 96, height: 14, borderRadius: 4 }} title="loading live question" />}
           <span style={{ flex: 1 }} />
-          <button className="tb-btn ghost"><Icon name="chevron-u" size={12} /> Prev</button>
-          <button className="tb-btn ghost">Next <Icon name="chevron-d" size={12} /></button>
+          <StubButton name="review-prev" className="tb-btn ghost"><Icon name="chevron-u" size={12} /> Prev</StubButton>
+          <StubButton name="review-next" className="tb-btn ghost">Next <Icon name="chevron-d" size={12} /></StubButton>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -132,7 +146,7 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
                   </span>
                 )
               })}
-              <button className="tb-btn ghost" style={{ height: 22, padding: '0 8px', font: '500 11px var(--sans)' }}><Icon name="plus" size={10} /> add tag</button>
+              <StubButton name="review-add-tag" className="tb-btn ghost" style={{ height: 22, padding: '0 8px', font: '500 11px var(--sans)' }}><Icon name="plus" size={10} /> add tag</StubButton>
             </div>
 
             <h2 style={{ font: '500 13px var(--sans)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 8px' }}>Linked items</h2>
@@ -202,15 +216,11 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
   )
 }
 
-const TUTOR_MESSAGES = [
-  { from: 'tutor', text: 'Walk me through the energy yield. How many cycles of β-oxidation does palmitate go through?' },
-  { from: 'you', text: 'Seven cycles — C16 fatty acid, n/2 − 1 = 7.' },
-  { from: 'tutor', text: 'Right. Each cycle produces what?' },
-  { from: 'you', text: '1 NADH, 1 FADH₂, 1 acetyl-CoA — and the last cycle gives 2 acetyl-CoA.' },
-  { from: 'tutor', text: 'Good. So tally the cofactors and acetyl-CoA. Then sum the ATP equivalents — but be careful about which shuttle the question specifies. What\'s it say?' },
-  { from: 'you', text: 'Malate-aspartate. So NADH stays at 2.5 ATP.' },
-  { from: 'tutor', text: 'Now the cost — what does activation of the fatty acid cost?' }
-]
+// Socratic tutor conversation is wired to the MCP host in P5 (¶T12); until then
+// the message stream is an empty-state, ⊥ a scripted sample dialogue.
+const TutorEmpty = () => (
+  <EmptyState text="Tutor not yet wired" hint="Socratic turns arrive via the MCP host (P5)" />
+)
 
 interface TutorProps {
   draftFactor: string
@@ -243,28 +253,21 @@ function TutorPane({ draftFactor, setDraftFactor, onClose, layout, onSave, saveS
           <span style={{ font: '600 13px var(--sans)', color: 'var(--ink)' }}>Tutor</span>
           <span className="badge slate" style={{ height: 18, padding: '0 6px' }}><span className="d" />MCP · gpt-4.1</span>
           <span style={{ flex: 1 }} />
-          <button className="tb-btn" style={{ height: 22, padding: '0 6px' }}><Icon name="more" size={12} /></button>
+          <StubButton name="tutor-more" className="tb-btn" style={{ height: 22, padding: '0 6px' }}><Icon name="more" size={12} /></StubButton>
           {onClose && <button className="tb-btn" onClick={onClose} style={{ height: 22, padding: '0 6px' }}><Icon name="x" size={11} /></button>}
         </div>
       )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', minHeight: 0 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {TUTOR_MESSAGES.map((m, i) => (
-            <div key={i} style={{ alignSelf: m.from === 'tutor' ? 'flex-start' : 'flex-end', maxWidth: '92%' }}>
-              <div style={{ font: '500 10px var(--sans)', letterSpacing: '0.06em', textTransform: 'uppercase', color: m.from === 'tutor' ? 'var(--clay)' : 'var(--ink-3)', marginBottom: 3 }}>{m.from === 'tutor' ? 'tutor' : 'you'}</div>
-              <div style={{ background: m.from === 'tutor' ? 'var(--panel)' : 'var(--clay)', color: m.from === 'tutor' ? 'var(--ink)' : 'var(--canvas)', padding: '9px 12px', borderRadius: 10, font: '400 14px/1.55 var(--serif)', border: m.from === 'tutor' ? '0.5px solid var(--hair)' : 'none', boxShadow: m.from === 'tutor' ? 'var(--shadow-sm)' : 'none', textWrap: 'pretty' } as React.CSSProperties}>{m.text}</div>
-            </div>
-          ))}
-        </div>
+        <TutorEmpty />
       </div>
 
       <DiscriminatorCapture draftFactor={draftFactor} setDraftFactor={setDraftFactor} onSave={onSave} saveState={saveState} nodeName={nodeName} />
 
       {layout !== 'split' && (
         <div style={{ borderTop: '0.5px solid var(--hair)', padding: '10px 14px', background: 'var(--sunken)', flexShrink: 0, display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input value={input} placeholder="Ask the tutor…" onChange={(e) => setInput(e.target.value)} style={{ flex: 1, height: 30, padding: '0 10px', border: '0.5px solid var(--hair)', borderRadius: 7, background: 'var(--panel)', font: '500 13px var(--sans)', color: 'var(--ink)', outline: 'none' }} />
-          <button className="tb-btn ghost" style={{ height: 30 }}><Icon name="arrow-r" size={12} /></button>
+          <input value={input} placeholder="Ask the tutor… (P5)" onChange={(e) => setInput(e.target.value)} style={{ flex: 1, height: 30, padding: '0 10px', border: '0.5px solid var(--hair)', borderRadius: 7, background: 'var(--panel)', font: '500 13px var(--sans)', color: 'var(--ink)', outline: 'none' }} />
+          <StubButton name="tutor-send" className="tb-btn ghost" style={{ height: 30 }}><Icon name="arrow-r" size={12} /></StubButton>
         </div>
       )}
     </div>
@@ -289,7 +292,7 @@ function DiscriminatorCapture({ draftFactor, setDraftFactor, onSave, saveState, 
             : <>persists to <span style={{ color: 'var(--ink-2)' }}>Notion · {nodeName}</span></>}
         </span>
         <span style={{ flex: 1 }} />
-        <button className="tb-btn">Skip</button>
+        <StubButton name="discriminator-skip" className="tb-btn">Skip</StubButton>
         <SaveButton onSave={onSave} saveState={saveState} />
       </div>
     </div>
@@ -317,12 +320,7 @@ function SplitTutorBody({ draftFactor, setDraftFactor, onSave, saveState, nodeNa
     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.4fr 1fr', minHeight: 0, overflow: 'hidden' }}>
       <div style={{ overflowY: 'auto', padding: '12px 18px', borderRight: '0.5px solid var(--hair)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 720, margin: '0 auto' }}>
-          {TUTOR_MESSAGES.map((m, i) => (
-            <div key={i} style={{ alignSelf: m.from === 'tutor' ? 'flex-start' : 'flex-end', maxWidth: '88%' }}>
-              <div style={{ font: '500 10px var(--sans)', letterSpacing: '0.06em', textTransform: 'uppercase', color: m.from === 'tutor' ? 'var(--clay)' : 'var(--ink-3)', marginBottom: 3 }}>{m.from === 'tutor' ? 'tutor' : 'you'}</div>
-              <div style={{ background: m.from === 'tutor' ? 'var(--panel)' : 'var(--clay)', color: m.from === 'tutor' ? 'var(--ink)' : 'var(--canvas)', padding: '8px 11px', borderRadius: 10, font: '400 13.5px/1.5 var(--serif)', border: m.from === 'tutor' ? '0.5px solid var(--hair)' : 'none', boxShadow: m.from === 'tutor' ? 'var(--shadow-sm)' : 'none', textWrap: 'pretty' } as React.CSSProperties}>{m.text}</div>
-            </div>
-          ))}
+          <TutorEmpty />
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--panel)' }}>
@@ -339,7 +337,7 @@ function SplitTutorBody({ draftFactor, setDraftFactor, onSave, saveState, nodeNa
             <Icon name="link" size={11} /><span style={{ color: 'var(--ink-2)' }}>Notion · {nodeName}</span>
           </span>
           <span style={{ flex: 1 }} />
-          <button className="tb-btn">Skip</button>
+          <StubButton name="discriminator-skip" className="tb-btn">Skip</StubButton>
           <SaveButton onSave={onSave} saveState={saveState} label="Save" />
         </div>
       </div>

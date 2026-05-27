@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon, KindGlyph, StatCard, MasteryViz, MasteryLegend } from '../components/primitives'
+import { Icon, KindGlyph, StatCard, MasteryViz, MasteryLegend, EmptyState, StubButton } from '../components/primitives'
 import { masteryColor } from '../helpers'
 import { useDB, useStore } from '../data/store'
 import type { Tweaks } from '../types'
@@ -10,15 +10,16 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
   const { status } = useStore()
   const T = db.TODAY
   const topNodes = db.OUTLINE.filter((n) => n.depth === 0)
+  const Q = db.REVIEW_QUESTION
+  const hasResume = status.live.has('review') && !!Q.qid
 
   return (
     <div className="content-scroll">
       <div style={{ marginBottom: 28 }}>
-        <div style={{ font: '500 11px var(--sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 8 }}>{T.date}</div>
-        <h1 className="h1">Good morning, Ramiro.</h1>
+        {T.date && <div style={{ font: '500 11px var(--sans)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 8 }}>{T.date}</div>}
+        <h1 className="h1">Good morning.</h1>
         <p className="lede" style={{ marginTop: 8, maxWidth: 680 }}>
-          You have {T.flaggedCount} flagged attempts to review, {T.ankiDue - T.ankiCompleted} Anki cards left in today's budget,
-          and the categorizer found {T.newConnections} new connections between items overnight.
+          You have {T.flaggedCount} flagged attempts to review and {Math.max(0, T.ankiDue - T.ankiCompleted)} Anki cards left in today's budget.
         </p>
       </div>
 
@@ -53,45 +54,36 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
           }
           onClick={() => setView('captures')} />
 
-        <StatCard label="PDF inbox" value={T.pdfNew} sub="ingested" accent="moss"
+        <StatCard label="PDF inbox" value={db.PDFS.length} sub="ingested" accent="moss"
           footer={
             <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>
-              <span className="tnum">47</span> new atomic facts · <span className="tnum">1</span> awaiting tag
+              <span className="tnum">{db.FACTS.length}</span> atomic facts
             </div>
           }
           onClick={() => setView('pdfs')} />
       </div>
 
-      <div className="card" style={{ padding: 0, marginBottom: 28, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'stretch' }}>
-        <div style={{ padding: '18px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <span className="badge clay"><span className="d" />resume</span>
-            <span className="badge"><span className="d" />Bio-Sys 14 · UWorld</span>
-            <span style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>Started 9:42am · 18 of 28 · paused at Q12420</span>
+      <div className="card" style={{ padding: 0, marginBottom: 28, overflow: 'hidden' }}>
+        {hasResume ? (
+          <div style={{ padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span className="badge clay"><span className="d" />resume</span>
+              <span className="mono badge"><span className="d" />Q · {Q.qid}</span>
+              <span style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>{T.flaggedCount} flagged attempts in the queue</span>
+            </div>
+            <h2 className="h2" style={{ marginBottom: 4 }}>Resume your review queue</h2>
+            <p style={{ font: '400 14.5px/1.5 var(--serif)', color: 'var(--ink-2)', margin: '0 0 12px', maxWidth: 640 }}>
+              Pick up the next flagged attempt. The full question detail loads in the review pane.
+            </p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="tb-btn primary" onClick={() => openQuestion()}>Resume review <Icon name="arrow-r" size={12} /></button>
+              <StubButton name="skip-next-flagged" className="tb-btn ghost">Skip · next flagged</StubButton>
+              <StubButton name="open-in-tutor" className="tb-btn">Open in tutor <span className="kbd">⌘K</span></StubButton>
+            </div>
           </div>
-          <h2 className="h2" style={{ marginBottom: 4 }}>Net ATP from palmitate β-oxidation</h2>
-          <p style={{ font: '400 14.5px/1.5 var(--serif)', color: 'var(--ink-2)', margin: '0 0 12px', maxWidth: 640 }}>
-            You picked B (106). The correct answer is C (120). You missed this same question
-            on April&nbsp;18 — and there's now a discriminator note from March 2 you may have forgotten about.
-          </p>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="tb-btn primary" onClick={() => openQuestion()}>Resume review <Icon name="arrow-r" size={12} /></button>
-            <button className="tb-btn ghost">Skip · next flagged</button>
-            <button className="tb-btn">Open in tutor <span className="kbd">⌘K</span></button>
-          </div>
-        </div>
-        <div style={{ padding: '18px 22px 18px 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6, minWidth: 220, background: 'linear-gradient(90deg, transparent, var(--wash) 30%)' }}>
-          <div style={{ font: '500 10.5px var(--sans)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Outline path</div>
-          <div style={{ font: '500 13px var(--sans)', color: 'var(--ink-2)', lineHeight: 1.5 }}>
-            B/BC <span className="muted">›</span> FC 1 <span className="muted">›</span> 1D
-            <br />
-            <span style={{ color: 'var(--ink)', fontWeight: 600 }}>Beta-oxidation of fatty acids</span>
-          </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-            <span className="badge moss"><span className="d" />35% mastery</span>
-            <span className="badge"><span className="d" />5 items</span>
-          </div>
-        </div>
+        ) : (
+          <EmptyState text="Nothing flagged to resume" hint={status.online ? 'flag an attempt during review to build the queue' : 'backend offline — start the API to load your queue'} />
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 24, marginBottom: 28 }}>
@@ -106,7 +98,9 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
             </div>
           </div>
           <div className="card" style={{ padding: '16px 18px' }}>
-            <MasteryViz kind={tweaks.masteryViz} rows={topNodes} onSelect={() => setView('outline')} />
+            {topNodes.length > 0
+              ? <MasteryViz kind={tweaks.masteryViz} rows={topNodes} onSelect={() => setView('outline')} />
+              : <EmptyState text="No outline loaded" hint={status.online ? 'import a course outline to see mastery' : 'backend offline'} />}
           </div>
         </div>
 
@@ -116,9 +110,12 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
               <h3 className="h3" style={{ font: '500 18px var(--serif)', marginBottom: 2 }}>New connections</h3>
               <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>Cross-links between questions, anki, facts · today</div>
             </div>
-            <span className="stub-badge" title="concept_edges is P2 — no endpoint yet (BACKEND_CORE §7)">sample</span>
+            <span className="stub-badge" title="concept_edges is P2 — no endpoint yet (BACKEND_CORE §7)">no endpoint</span>
           </div>
           <div className="card" style={{ padding: 6 }}>
+            {db.CONNECTIONS.length === 0 ? (
+              <EmptyState text="No connections yet" hint="concept_edges endpoint pending (P2)" />
+            ) : (
             <div className="linkrail">
               {db.CONNECTIONS.map((c, i) => (
                 <div key={i} className="item" style={{ padding: '8px 10px' }}>
@@ -138,6 +135,7 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
                 </div>
               ))}
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -148,7 +146,7 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
             <h3 className="h3" style={{ font: '500 18px var(--serif)', marginBottom: 2 }}>Recent sessions</h3>
             <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>From UWorld + manual entry, last week</div>
           </div>
-          <button className="tb-btn">View all <Icon name="arrow-r" size={11} /></button>
+          <StubButton name="sessions-view-all" className="tb-btn">View all <Icon name="arrow-r" size={11} /></StubButton>
         </div>
 
         <div className="card" style={{ overflow: 'hidden' }}>
@@ -159,6 +157,7 @@ export function HomeView({ tweaks, setView, openQuestion }: { tweaks: Tweaks; se
             <span style={{ textAlign: 'right' }}>Time</span>
             <span />
           </div>
+          {db.SESSIONS.length === 0 && <EmptyState text="No sessions yet" hint={status.online ? 'capture attempts to build session history' : 'backend offline'} />}
           {db.SESSIONS.map((s, i) => {
             const node = db.NODE_BY_ID[s.node]
             const score = s.items ? s.correct / s.items : 0

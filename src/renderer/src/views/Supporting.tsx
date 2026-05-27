@@ -1,19 +1,9 @@
 import React from 'react'
-import { Icon, KindGlyph, StatCard, MasteryBars } from '../components/primitives'
+import { Icon, KindGlyph, StatCard, MasteryBars, EmptyState, StubButton } from '../components/primitives'
 import { masteryColor } from '../helpers'
 import { useDB, useStore } from '../data/store'
 import { useAsync } from '../data/useAsync'
 import type { View } from '.'
-
-// Shared empty state — shown when a live read returns zero rows (⊥ silent mock).
-function EmptyState({ text, hint }: { text: string; hint?: string }) {
-  return (
-    <div style={{ padding: '26px 16px', textAlign: 'center' }}>
-      <div style={{ font: '500 13px var(--sans)', color: 'var(--ink-2)' }}>{text}</div>
-      {hint && <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginTop: 3 }}>{hint}</div>}
-    </div>
-  )
-}
 
 // ───────────────────────── ATOMIC FACTS ─────────────────────────
 export function FactsView() {
@@ -28,8 +18,8 @@ export function FactsView() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span className="stub-badge" title="PDF-ingest / atomic-fact workflow is P2 — no endpoint yet">sample data</span>
-          <button className="tb-btn ghost"><Icon name="filter" size={11} /> Filter</button>
+          <span className="stub-badge" title="PDF-ingest / atomic-fact workflow is P2 — no endpoint yet">no endpoint</span>
+          <StubButton name="facts-filter" className="tb-btn ghost"><Icon name="filter" size={11} /> Filter</StubButton>
         </div>
       </div>
       <div className="card" style={{ overflow: 'hidden' }}>
@@ -38,6 +28,7 @@ export function FactsView() {
           <span style={{ textAlign: 'right' }}>Page</span>
           <span style={{ textAlign: 'right' }}>Version</span>
         </div>
+        {db.FACTS.length === 0 && <EmptyState text="No atomic facts" hint="PDF-ingest / atomic-fact endpoint pending (P2)" />}
         {db.FACTS.map((f, i) => {
           const node = db.NODE_BY_ID[f.node]
           return (
@@ -80,15 +71,15 @@ export function AnkiView() {
           <p className="lede" style={{ marginTop: 6, maxWidth: 580 }}>Sync · queue · load adherence. Cards are scoped to the {db.COURSE.shortName} outline by the AnKing tag-shape parser.</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="tb-btn ghost">Sync now</button>
-          <button className="tb-btn primary">Open assignment</button>
+          <StubButton name="anki-sync-now" className="tb-btn ghost">Sync now</StubButton>
+          <StubButton name="anki-open-assignment" className="tb-btn primary">Open assignment</StubButton>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
         <StatCard label="Due today" value={due} accent="plum" sub="cards" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="tnum">{Math.min(12, due)}</span> overdue · <span className="tnum">{Math.max(0, due - 12)}</span> due now</div>} />
         <StatCard label="Today's load" value={`${completed}/${target}`} accent="moss" sub="reviewed" footer={<div style={{ height: 4, borderRadius: 999, background: 'rgba(40,30,15,0.06)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${(completed / target) * 100}%`, background: 'var(--moss)' }} /></div>} />
-        <StatCard label="Adherence" value={seriesLive ? `${adherencePct}%` : '83%'} accent="clay" sub="last 30 days" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>{seriesLive ? <><span className="tnum">{daysAtTarget}</span> of {db.ANKI_LOAD.length} days at target</> : <><span className="tnum">24</span> of 30 days at target</>}</div>} />
+        <StatCard label="Adherence" value={seriesLive ? `${adherencePct}%` : '—'} accent="clay" sub="last 30 days" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>{seriesLive ? <><span className="tnum">{daysAtTarget}</span> of {db.ANKI_LOAD.length} days at target</> : 'no adherence data'}</div>} />
       </div>
 
       <div style={{ marginBottom: 28 }}>
@@ -96,9 +87,13 @@ export function AnkiView() {
           <h3 className="section-title" style={{ margin: 0 }}>Load adherence · daily reviews vs target {target}</h3>
           {status.live.has('anki-series')
             ? <span className="badge moss" style={{ height: 18, padding: '0 6px' }}><span className="d" />live</span>
-            : <span className="stub-badge">30-day series sampled</span>}
+            : <span className="stub-badge">no series</span>}
         </div>
         <div className="card" style={{ padding: '18px 18px 14px' }}>
+          {db.ANKI_LOAD.length === 0 ? (
+            <EmptyState text="No adherence series" hint={status.online ? 'review cards to build the daily series' : 'backend offline'} />
+          ) : (
+          <>
           <div style={{ position: 'relative', height: 140 }}>
             <div style={{ position: 'absolute', left: 0, right: 0, top: '30%', height: 0, borderTop: '1px dashed var(--hair)' }} />
             <div style={{ position: 'absolute', right: 4, top: '30%', font: '500 10px var(--mono)', color: 'var(--ink-3)', transform: 'translateY(-50%)' }}>target · {target}</div>
@@ -118,6 +113,8 @@ export function AnkiView() {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, font: '500 11px var(--mono)', color: 'var(--ink-3)' }}>
             <span>30 days ago</span><span>15 days ago</span><span>today</span>
           </div>
+          </>
+          )}
         </div>
       </div>
 
@@ -127,7 +124,7 @@ export function AnkiView() {
       </div>
       <div className="card" style={{ overflow: 'hidden' }}>
         {db.ANKI_QUEUE.length === 0 ? (
-          <EmptyState text="No cards due" hint={status.live.has('anki') ? 'Anki review queue is empty — sync cards or check AnkiConnect' : 'backend offline · sample data'} />
+          <EmptyState text="No cards due" hint={status.live.has('anki') ? 'Anki review queue is empty — sync cards or check AnkiConnect' : 'backend offline'} />
         ) : db.ANKI_QUEUE.map((c, i) => {
           const node = c.node != null ? db.NODE_BY_ID[c.node] : null
           return (
@@ -154,13 +151,30 @@ export function PdfsView() {
   const db = useDB()
   const [selected, setSelected] = React.useState(db.PDFS[0]?.id)
   const pdf = db.PDFS.find((p) => p.id === selected) || db.PDFS[0]
+  // No pdf_sources endpoint yet → empty-state (⊥ crash on pdf.sha / sample list).
+  if (!pdf) {
+    return (
+      <div className="content-scroll">
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
+          <div style={{ flex: 1 }}>
+            <h1 className="h1">PDF inbox</h1>
+            <p className="lede" style={{ marginTop: 6 }}>Ingested PDFs and the atomic facts extracted from them.</p>
+          </div>
+          <StubButton name="pdf-add" className="tb-btn primary"><Icon name="plus" size={11} color="var(--canvas)" /> Add</StubButton>
+        </div>
+        <div className="card">
+          <EmptyState text="No PDFs" hint="PDF-ingest endpoint pending (P2)" />
+        </div>
+      </div>
+    )
+  }
   return (
     <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
       <aside style={{ width: 360, borderRight: '0.5px solid var(--hair)', background: 'var(--wash)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '13px 16px 10px', borderBottom: '0.5px solid var(--hair)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Icon name="pdf" size={14} color="var(--ink-2)" />
           <span style={{ font: '600 13px var(--sans)', color: 'var(--ink)' }}>PDF inbox</span>
-          <span style={{ marginLeft: 'auto' }}><button className="tb-btn primary" style={{ height: 22, padding: '0 8px', font: '500 11px var(--sans)' }}><Icon name="plus" size={10} color="var(--canvas)" /> Add</button></span>
+          <span style={{ marginLeft: 'auto' }}><StubButton name="pdf-add" className="tb-btn primary" style={{ height: 22, padding: '0 8px', font: '500 11px var(--sans)' }}><Icon name="plus" size={10} color="var(--canvas)" /> Add</StubButton></span>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
           {db.PDFS.map((p) => {
@@ -191,7 +205,7 @@ export function PdfsView() {
           <span className="badge"><span className="d" /><span className="tnum">{pdf.pages}</span> pages</span>
           <span className="badge"><span className="d" /><span className="tnum">{pdf.factsCount}</span> atomic facts</span>
           <span className="badge slate"><span className="d" />ingested {pdf.ingestedAt}</span>
-          <span className="stub-badge">P2 · sample</span>
+          <span className="stub-badge">no endpoint</span>
         </div>
         <div style={{ marginTop: 22 }}>
           <h3 className="section-title">Atomic facts · grounded to this PDF</h3>
@@ -224,15 +238,15 @@ export function NotionView() {
           <p className="lede" style={{ marginTop: 6, maxWidth: 580 }}>One Notion page per outline node. Atomic facts and discriminators appear as blocks within the node's page. One-way sync; this app never reads Notion content back.</p>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span className="stub-badge" title="NotionPage model exists; sync workflow is P2">P2 · sample</span>
-          <button className="tb-btn ghost">Sync queue</button>
+          <span className="stub-badge" title="NotionPage model exists; sync workflow is P2">no endpoint</span>
+          <StubButton name="notion-sync-queue" className="tb-btn ghost">Sync queue</StubButton>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
-        <StatCard label="Notion pages" value="312" accent="slate" sub="of 1,554 nodes" footer={<div style={{ height: 4, borderRadius: 999, background: 'rgba(40,30,15,0.06)', overflow: 'hidden' }}><div style={{ height: '100%', width: '20%', background: 'var(--slate)' }} /></div>} />
-        <StatCard label="Blocks written" value="4,812" accent="ink" sub="across all pages" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="tnum">2,394</span> facts · <span className="tnum">218</span> discriminators · <span className="tnum">2,200</span> backlinks</div>} />
-        <StatCard label="Pending writes" value="4" accent="amber" sub="awaiting sync" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>Next attempt in <span className="tnum">2m</span> · idempotent upsert</div>} />
+        <StatCard label="Notion pages" value={db.NOTION_PAGES.length} accent="slate" sub={db.COURSE.nodeCount ? `of ${db.COURSE.nodeCount.toLocaleString()} nodes` : undefined} footer={<div style={{ height: 4, borderRadius: 999, background: 'rgba(40,30,15,0.06)', overflow: 'hidden' }}><div style={{ height: '100%', width: '0%', background: 'var(--slate)' }} /></div>} />
+        <StatCard label="Blocks written" value="—" accent="ink" sub="across all pages" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>endpoint pending (P2)</div>} />
+        <StatCard label="Pending writes" value="—" accent="amber" sub="awaiting sync" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>idempotent upsert</div>} />
       </div>
 
       <h3 className="section-title">Page index</h3>
@@ -244,6 +258,7 @@ export function NotionView() {
           <span style={{ textAlign: 'right' }}>Last synced</span>
           <span />
         </div>
+        {db.NOTION_PAGES.length === 0 && <EmptyState text="No Notion pages" hint="notion_pages endpoint pending (P2)" />}
         {db.NOTION_PAGES.map((p, i) => {
           const node = db.NODE_BY_ID[p.node]
           return (
@@ -298,12 +313,11 @@ export function SessionView() {
   const attempts = d?.attempts ?? s?.items ?? 0
   const correct = d?.correct ?? s?.correct ?? 0
   const accuracy = d ? d.accuracy : (s && s.items ? s.correct / s.items : 0)
-  const flaggedCount = d?.flaggedCount ?? 6
-  const topicCount = d?.topicCount ?? 11
-  // by_topic rows feed MasteryBars directly; fall back to sample nodes offline.
-  const coverageRows = d?.byTopic?.length
-    ? d.byTopic
-    : db.OUTLINE.filter((n) => [11, 12, 114, 1143, 1144].includes(n.id))
+  const flaggedCount = d?.flaggedCount ?? 0
+  const topicCount = d?.topicCount ?? 0
+  // by_topic rows feed MasteryBars directly; empty until the live summary loads
+  // (⊥ sample nodes).
+  const coverageRows = d?.byTopic ?? []
 
   return (
     <div className="content-scroll">
@@ -317,8 +331,8 @@ export function SessionView() {
           <p className="lede" style={{ marginTop: 6 }}>{s?.date ?? '—'} · {s?.time ?? '—'} wall-clock · {s?.source ?? 'uworld'} <span className="badge slate" style={{ marginLeft: 4 }}><span className="d" />{s?.source ?? 'uworld'}</span></p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="tb-btn ghost">Export to Notion</button>
-          <button className="tb-btn primary">Review flagged · {flaggedCount}</button>
+          <StubButton name="session-export-notion" className="tb-btn ghost">Export to Notion</StubButton>
+          <StubButton name="session-review-flagged" className="tb-btn primary">Review flagged · {flaggedCount}</StubButton>
         </div>
       </div>
 
@@ -326,38 +340,25 @@ export function SessionView() {
         <StatCard label="Score" value={`${Math.round(accuracy * 100)}%`} accent="moss" footer={<div style={{ height: 4, borderRadius: 999, background: 'var(--m0)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${accuracy * 100}%`, background: 'var(--moss)' }} /></div>} />
         <StatCard label="Flagged" value={flaggedCount} accent="clay" sub="for review" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>from attempt notes</div>} />
         <StatCard label="Coverage" value={topicCount} accent="slate" sub="nodes touched" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>subtree-rolled per V-O1</div>} />
-        <StatCard label="New connections" value="4" accent="plum" sub="discovered" footer={<div style={{ display: 'flex', alignItems: 'center', gap: 6, font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="stub-badge">sample</span> concept_edges P2</div>} />
+        <StatCard label="New connections" value="—" accent="plum" sub="discovered" footer={<div style={{ display: 'flex', alignItems: 'center', gap: 6, font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="stub-badge">no endpoint</span> concept_edges P2</div>} />
       </div>
 
       <div style={{ marginTop: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <h3 className="section-title" style={{ margin: 0 }}>Per-question outcome</h3>
-          <span className="stub-badge" title="no per-attempt correctness feed yet — summary returns aggregates only">sample grid</span>
+          <span className="stub-badge" title="no per-attempt correctness feed yet — summary returns aggregates only">no endpoint</span>
         </div>
         <div className="card" style={{ padding: '14px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(28, 1fr)', gap: 4, marginBottom: 10 }}>
-            {Array.from({ length: 28 }, (_, i) => {
-              const correct = [1, 3, 4, 5, 7, 8, 10, 11, 13, 14, 15, 17, 18, 21, 23, 24, 25, 27].includes(i + 1)
-              const flagged = [2, 6, 9, 12, 16, 22].includes(i + 1)
-              return (
-                <div key={i} style={{ aspectRatio: '1', borderRadius: 4, background: correct ? 'var(--moss)' : 'oklch(0.62 0.18 30)', position: 'relative', opacity: 0.9, cursor: 'pointer' }}>
-                  {flagged && <div style={{ position: 'absolute', top: 1, right: 1, width: 4, height: 4, borderRadius: 999, background: 'var(--canvas)' }} />}
-                </div>
-              )
-            })}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--moss)' }} />correct</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'oklch(0.62 0.18 30)' }} />incorrect</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: 'oklch(0.62 0.18 30)', position: 'relative' }}><span style={{ position: 'absolute', top: 1, right: 1, width: 3, height: 3, borderRadius: 999, background: 'var(--canvas)' }} /></span>flagged</span>
-          </div>
+          <EmptyState text="No per-question outcomes" hint="per-attempt correctness endpoint pending — summary returns aggregates only" />
         </div>
       </div>
 
       <div style={{ marginTop: 24 }}>
         <h3 className="section-title">Node coverage{d?.byTopic?.length ? ` · ${d.byTopic.length} nodes` : ''}</h3>
         <div className="card" style={{ padding: '14px 16px' }}>
-          <MasteryBars rows={coverageRows} />
+          {coverageRows.length > 0
+            ? <MasteryBars rows={coverageRows} />
+            : <EmptyState text="No node coverage" hint={loading ? 'loading session summary…' : 'no per-node breakdown for this session'} />}
         </div>
       </div>
     </div>
@@ -375,8 +376,8 @@ export function CapturesView() {
           <p className="lede" style={{ marginTop: 6 }}>Incoming questions from the Chrome extension (UWorld), manual entry, and PDF question-set parsers. Auto-categorized every 15 min.</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="tb-btn ghost"><Icon name="filter" size={11} /> Filter</button>
-          <button className="tb-btn primary"><Icon name="plus" size={11} color="var(--canvas)" /> Manual entry</button>
+          <StubButton name="captures-filter" className="tb-btn ghost"><Icon name="filter" size={11} /> Filter</StubButton>
+          <StubButton name="captures-manual-entry" className="tb-btn primary"><Icon name="plus" size={11} color="var(--canvas)" /> Manual entry</StubButton>
         </div>
       </div>
 
@@ -463,8 +464,8 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
             </div>
             <div style={{ font: '400 13.5px var(--serif)', color: 'var(--ink-2)' }}>{c.detail}</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              <button className="tb-btn ghost" style={{ height: 24 }}>Test</button>
-              <button className="tb-btn" style={{ height: 24 }}><Icon name="more" size={12} /></button>
+              <StubButton name="settings-test-connection" className="tb-btn ghost" style={{ height: 24 }}>Test</StubButton>
+              <StubButton name="settings-connection-more" className="tb-btn" style={{ height: 24 }}><Icon name="more" size={12} /></StubButton>
             </div>
           </div>
         ))}
@@ -472,9 +473,9 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
 
       <h3 className="section-title" style={{ marginTop: 32 }}>Auth & tokens</h3>
       <div className="card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <SettingsRow label="X-Coach-Token" hint="Shared secret the extension and MCP host send" value={status.hasToken ? '••••••••••••••••••••••••__set' : 'not set'} />
-        <SettingsRow label="OpenAI API key" hint="Used by categorizer, calibrator, embeddings" value="sk-•••••••••••••••••••••••••__a821" />
-        <SettingsRow label="Notion integration token" hint="Write-out only · scoped to Gradient workspace" value="ntn_•••••••••••••••••••••__c004" />
+        <SettingsRow label="X-Coach-Token" hint="Shared secret the extension and MCP host send" value={status.hasToken ? 'set' : 'not set'} />
+        <SettingsRow label="OpenAI API key" hint="Used by categorizer, calibrator, embeddings" value={d?.openai.configured ? 'configured' : 'not set'} />
+        <SettingsRow label="Notion integration token" hint="Write-out only · scoped to Gradient workspace" value={d?.notion.configured ? 'configured' : 'not set'} />
         <SettingsRow label="API base URL" hint="Set GRADIENT_API_BASE to point elsewhere" value={status.apiBase} />
       </div>
 
@@ -487,8 +488,8 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
             <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>slug · <span className="mono">{db.COURSE.slug}</span> · {db.COURSE.nodeCount.toLocaleString()} nodes</div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="tb-btn ghost">Re-upload schema</button>
-            <button className="tb-btn ghost">Export</button>
+            <StubButton name="course-reupload-schema" className="tb-btn ghost">Re-upload schema</StubButton>
+            <StubButton name="course-export" className="tb-btn ghost">Export</StubButton>
           </div>
         </div>
         <div className="item" style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '11px 14px', borderTop: '0.5px solid var(--hair-2)', color: 'var(--ink-3)', cursor: 'pointer' }} onClick={() => setView('onboard')}>
@@ -502,7 +503,7 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
         <span style={{ width: 6, height: 6, borderRadius: '50%', background: status.online ? 'var(--moss)' : 'var(--ink-4)', boxShadow: status.online ? '0 0 0 2px var(--moss-2)' : '0 0 0 2px rgba(40,30,15,0.06)' }} />
         {status.online
           ? `API live · ${status.live.size} data sources · ${status.apiBase}`
-          : 'Backend offline · showing sample data'}
+          : 'Backend offline'}
       </div>
     </div>
   )
@@ -517,8 +518,8 @@ function SettingsRow({ label, hint, value }: { label: string; hint: string; valu
       </div>
       <div style={{ padding: '7px 11px', background: 'var(--sunken)', border: '0.5px solid var(--hair)', borderRadius: 7, font: '500 12.5px var(--mono)', color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
       <div style={{ display: 'flex', gap: 4 }}>
-        <button className="tb-btn ghost" style={{ height: 26 }}>Reveal</button>
-        <button className="tb-btn ghost" style={{ height: 26 }}>Rotate</button>
+        <StubButton name="settings-reveal-secret" className="tb-btn ghost" style={{ height: 26 }}>Reveal</StubButton>
+        <StubButton name="settings-rotate-secret" className="tb-btn ghost" style={{ height: 26 }}>Rotate</StubButton>
       </div>
     </div>
   )
@@ -527,9 +528,9 @@ function SettingsRow({ label, hint, value }: { label: string; hint: string; valu
 // ───────────────────────── ONBOARDING ─────────────────────────
 export function OnboardingView({ setView }: { setView: (v: View) => void }) {
   const { createCourse, importOutline } = useStore()
-  const [step, setStep] = React.useState(2)
-  const [slug, setSlug] = React.useState('usmle-step-1')
-  const [name, setName] = React.useState('USMLE Step 1')
+  const [step, setStep] = React.useState(1)
+  const [slug, setSlug] = React.useState('')
+  const [name, setName] = React.useState('')
   const [schema, setSchema] = React.useState<unknown | null>(null)
   const [fileName, setFileName] = React.useState<string>('')
   const [busy, setBusy] = React.useState(false)
@@ -591,8 +592,8 @@ export function OnboardingView({ setView }: { setView: (v: View) => void }) {
         <div style={{ padding: '16px 20px', borderBottom: '0.5px solid var(--hair-2)', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--wash)' }}>
           <Icon name="check" size={14} color="var(--moss)" />
           <span style={{ font: '500 13px var(--sans)', color: 'var(--ink-2)', flex: 1 }}>
-            <input value={name} onChange={(e) => setName(e.target.value)} style={{ font: '600 13px var(--sans)', color: 'var(--ink)', border: 0, background: 'transparent', outline: 'none', width: 160 }} /> ·
-            slug <input value={slug} onChange={(e) => setSlug(e.target.value)} className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink-2)', border: 0, background: 'transparent', outline: 'none', width: 130 }} />
+            <input value={name} placeholder="Course name" onChange={(e) => setName(e.target.value)} style={{ font: '600 13px var(--sans)', color: 'var(--ink)', border: 0, background: 'transparent', outline: 'none', width: 160 }} /> ·
+            slug <input value={slug} placeholder="course-slug" onChange={(e) => setSlug(e.target.value)} className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink-2)', border: 0, background: 'transparent', outline: 'none', width: 130 }} />
           </span>
           <button className="tb-btn ghost" style={{ height: 24 }} onClick={() => setStep(1)}>Edit</button>
         </div>

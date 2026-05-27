@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 // Typed async hook for on-demand reads (e.g. the Review question detail).
 // Cancels stale results so a fast deps change can't overwrite with an older
 // response. Failure is captured in `error`, never thrown into render (¶V2:
-// a failed live read leaves the caller free to fall back to sample data).
+// a failed live read leaves the caller free to render an empty-state).
 export interface AsyncState<T> {
   data: T | null
   loading: boolean

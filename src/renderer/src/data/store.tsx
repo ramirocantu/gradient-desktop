@@ -1,13 +1,29 @@
 import React from 'react'
-import * as mock from './mock'
 import * as API from './api'
 import { ApiError, cfg } from './client'
 import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
 import type {
-  DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
-  SystemStatusT, NodeMasteryT
+  DB, Course, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
+  SystemStatusT, NodeMasteryT, TodayT
 } from '../types'
+
+// ───────────────────────── empty base (⊥ mock) ─────────────────────────
+// The store starts empty and overlays live API results per domain. Domains
+// with no endpoint yet stay empty → views render an EmptyState. Offline = no
+// overlay = empty (skeletons while loading, error surfaced by the view).
+const EMPTY_COURSE: Course = {
+  id: 0, slug: '', name: '', shortName: '', abbr: '',
+  nodeCount: 0, questionCount: 0, ankiCount: 0, factCount: 0, notionPageCount: 0
+}
+const EMPTY_QUESTION: ReviewQuestionT = {
+  qid: 0, source: '', testId: '', attemptedAt: '', timeSeconds: 0, node: 0, flagged: false,
+  stem: '', choices: [], explanation: '', pastAttempts: [], tags: [], linkedAnki: [], linkedFacts: []
+}
+const EMPTY_TODAY: TodayT = {
+  date: '', flaggedCount: 0, needsReviewCount: 0, ankiDue: 0, ankiTarget: 0, ankiCompleted: 0,
+  capturesAwaiting: 0, pdfNew: 0, newConnections: 0, activeNodes: []
+}
 
 // Short attempt-history date: "Today" or "May 26".
 function fmtAttemptDate(iso: string | null): string {
@@ -177,7 +193,7 @@ function adaptChoices(
   distribution: Record<string, number>,
   picked: string | null
 ): ChoiceT[] {
-  if (!Array.isArray(raw)) return mock.REVIEW_QUESTION.choices
+  if (!Array.isArray(raw)) return []
   const total = Object.values(distribution).reduce((a, b) => a + b, 0)
   return raw.map((c: any, i: number) => {
     // stored choices are {key, html, plain}; tolerate label/letter/text too
@@ -203,7 +219,7 @@ function adaptQuestion(
     source: t.source,
     confidence: t.confidence ?? undefined
   }))
-  const node = tags[0]?.node ?? mock.REVIEW_QUESTION.node
+  const node = tags[0]?.node ?? 0
   const history = q.attempt_history ?? []
   return {
     qid: q.qid,
@@ -259,23 +275,22 @@ export interface Store {
 }
 
 function baseDB(): DB {
-  const byId = buildNodeIndex(mock.OUTLINE)
   return {
-    COURSE: mock.COURSE,
-    OUTLINE: mock.OUTLINE,
-    NODE_BY_ID: byId,
-    nodePath: makeNodePath(byId),
-    CAPTURES: mock.CAPTURES,
-    REVIEW_QUESTION: mock.REVIEW_QUESTION,
-    ANKI_QUEUE: mock.ANKI_QUEUE,
-    ANKI_LOAD: mock.ANKI_LOAD,
-    SESSIONS: mock.SESSIONS,
-    PDFS: mock.PDFS,
-    FACTS: mock.FACTS,
-    NOTION_PAGES: mock.NOTION_PAGES,
-    CONNECTIONS: mock.CONNECTIONS,
-    DISCRIMINATORS: mock.DISCRIMINATORS,
-    TODAY: mock.TODAY
+    COURSE: EMPTY_COURSE,
+    OUTLINE: [],
+    NODE_BY_ID: {},
+    nodePath: () => [],
+    CAPTURES: [],
+    REVIEW_QUESTION: EMPTY_QUESTION,
+    ANKI_QUEUE: [],
+    ANKI_LOAD: [],
+    SESSIONS: [],
+    PDFS: [],
+    FACTS: [],
+    NOTION_PAGES: [],
+    CONNECTIONS: [],
+    DISCRIMINATORS: [],
+    TODAY: EMPTY_TODAY
   }
 }
 

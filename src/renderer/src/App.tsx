@@ -22,7 +22,7 @@ export default function App() {
     review: db.TODAY.flaggedCount,
     anki: Math.max(0, db.TODAY.ankiDue - db.TODAY.ankiCompleted),
     captures: db.TODAY.capturesAwaiting,
-    pdfs: 1
+    pdfs: db.PDFS.length
   }
 
   const C = db.COURSE.shortName
@@ -31,7 +31,7 @@ export default function App() {
       case 'home': return [C, 'Home']
       case 'review': return [C, 'Review queue', `Q · ${db.REVIEW_QUESTION.qid}`]
       case 'outline': return [C, 'Outline browser']
-      case 'node': return [C, 'Outline', '1D Bioenergetics', 'Beta-oxidation of fatty acids']
+      case 'node': return [C, 'Outline', 'Node']
       case 'anki': return [C, 'Anki']
       case 'facts': return [C, 'Atomic facts']
       case 'pdfs': return [C, 'PDF inbox']

@@ -1,7 +1,8 @@
 // Domain types. The app renders the rich shapes the design proposal assumes;
-// the data layer (data/*) adapts the live FastAPI payloads into these and fills
-// the gaps the backend doesn't expose yet (mastery, item counts, connections,
-// atomic facts, Notion pages) from bundled mock data.
+// the data layer (data/*) adapts the live FastAPI payloads into these. The store
+// starts from an empty base and overlays live results per domain. Domains with
+// no endpoint yet (connections, atomic facts, Notion pages, PDFs) stay empty and
+// the views render an explicit EmptyState — ⊥ bundled mock / fabricated data.
 
 export type MasteryViz = 'heatmap' | 'bars' | 'dots' | 'sunburst'
 export type TutorLayout = 'docked' | 'split' | 'floating'
@@ -170,7 +171,7 @@ export interface TodayT {
   activeNodes: number[]
 }
 
-// The composite object every view reads. Built by the store from mock data,
+// The composite object every view reads. Built by the store as an empty base,
 // then domain-by-domain overlaid with live API results when reachable.
 export interface DB {
   COURSE: Course
@@ -213,7 +214,8 @@ export interface NodeMasteryT {
   byId: Record<number, number> // node_id → accuracy (self + direct children)
 }
 
-// Which domains are backed by a real endpoint vs. always-mock (P2 / fenced).
+// Which domains are backed by a real endpoint vs. no-endpoint-yet (P2 / fenced).
+// No-endpoint domains stay empty (EmptyState in the view) until their route ships.
 export type Domain =
   | 'course' | 'outline' | 'flagged' | 'sessions' | 'captures'
   | 'anki' | 'review'

@@ -8,14 +8,16 @@ external surfaces here. Missing backend endpoints flagged `?`.
 ## ¶G
 
 Wire desktop client to live Gradient API on every surface; kill all sample/stub
-overlays. Offline fallback stays.
+overlays. Mock deleted — empty base + per-domain live overlay. Offline / empty
+read ⇒ skeletons + empty-states; ⊥ sample/mock data.
 
 ## ¶A
 
 - React 18 + TS, electron-vite (main / preload / renderer roots). Native macOS
   window (`titleBarStyle hiddenInset`).
-- `src/renderer/src/data/store.tsx` = per-domain overlay: base mock → live
-  result swapped in per domain when reachable. `data/client.ts` fetch wrapper
+- `src/renderer/src/data/store.tsx` = per-domain overlay: empty base (`baseDB`,
+  ⊥ mock) → live result swapped in per domain when reachable; unfilled domains
+  stay empty (view renders EmptyState). `data/client.ts` fetch wrapper
   (X-Coach-Token, timeout). `data/api.ts` typed endpoint fns. adapters map API
   payload → view shape (`adapt*` in store).
 - preload (`src/preload/index.ts`) bridges `window.gradient` = {apiBase,
@@ -25,7 +27,7 @@ overlays. Offline fallback stays.
 ## ¶C
 
 - TS strict on. No react-query (small `useAsync` ok). ⊥ heavy data libs.
-- Backend unreachable ⇒ app still navigable on sample data.
+- Backend unreachable ⇒ app still navigable via skeletons (loading) + empty-states; ⊥ mock/sample fallback.
 - New data need ⇒ extend backend public `/api/v1/*` (+ service), ⊥ private /
   dashboard-only route (mirrors backend V-D1).
 - All token-gated calls send `X-Coach-Token`. CORS = loopback (dev origin
@@ -59,16 +61,17 @@ overlays. Offline fallback stays.
 
 ## ¶V
 
-- V1: every view domain is live OR carries explicit `stub-badge`. ⊥ silent mock shown as live.
-- V2: backend unreachable ⇒ app fully navigable on sample data; ⊥ crash / blank screen.
+- V1: every view domain is live OR carries explicit empty-state (live-read-empty / no-endpoint badge). ⊥ silent mock shown as live.
+- V2: backend unreachable OR live read empty ⇒ app fully navigable via skeletons (loading) + empty-states; ⊥ crash / blank screen; ⊥ mock/sample fallback.
 - V3: raw API shape stays in `data/` (client/api/adapt). ⊥ leak API field names into view JSX.
 - V4: new data need ⇒ backend public `/api/v1/*` route. ⊥ private/dashboard route (backend V-D1).
 - V5: writes safe — discriminator dedup `(question_id, factor_text)`; HTTP 409 = already-saved = success. ⊥ duplicate-on-retry.
-- V6: mastery / connections / atomic_facts / notion shown from real endpoint only; until endpoint ships, sample-badged. ⊥ fabricate per-node mastery as if measured.
+- V6: mastery / connections / atomic_facts / notion shown from real endpoint only; until endpoint ships, empty-state (no-endpoint badge). ⊥ fabricate per-node mastery or sample rows as if measured.
 - V7: token-gated reads degrade independently (`Promise.allSettled`). One 401/500 ⊥ blank whole app.
 - V8: apiBase + coachToken + courseSlug from env/preload. ⊥ hardcode in renderer.
-- V9: each domain swapped live ⇒ its `stub-badge` removed same change. ⊥ domain both live + badged.
+- V9: each domain swapped live ⇒ its empty-state / no-endpoint badge removed same change. ⊥ domain both live + badged.
 - V10: a ¶T marked "no backend change" must consume a field an existing endpoint actually **populates**. ⊥ assume TODO-stubbed / empty payload fields (e.g. `captures.topics`, session `by_topic`). Verify payload non-empty before tagging buildable-now. (¶B1)
+- V11: store base (`baseDB`) = empty (⊥ bundled mock); live API overlays per domain. Unwired controls = no-op `StubButton` (greyed indicator + TODO log), ⊥ fake-functional button silently doing nothing. (¶B2)
 
 ## ¶P
 
@@ -82,8 +85,8 @@ overlays. Offline fallback stays.
 
 - Backend deps block P2–P4. Owned by `../SPEC.md`: unfence analytics (backend T17), KB substrate models+migrations (T24), KB service seams (T26), retrieval+grounded gen (T28–T30). Desktop tasks here cite the missing endpoint, not the backend impl.
 - Packaged-app CORS (`file://`) unresolved — dev only for now.
-- Tutor chat is mocked dialogue (`TUTOR_MESSAGES`); discriminator save already live.
-- Session per-question outcome grid stays sampled (badged): `sessions/{id}/summary` returns aggregates + flagged list, no per-attempt correctness array. Needs a backend per-attempt endpoint (future `../SPEC.md` task) to go live.
+- Tutor chat = EmptyState ("MCP host pending", ¶T12); `TUTOR_MESSAGES` mock removed. Discriminator save already live.
+- Session per-question outcome grid = EmptyState (no-endpoint badge): `sessions/{id}/summary` returns aggregates + flagged list, no per-attempt correctness array. Needs a backend per-attempt endpoint (future `../SPEC.md` task) to go live.
 
 ## ¶T
 
@@ -96,11 +99,11 @@ overlays. Offline fallback stays.
 | T5 | x | Review: live `picked`/`distribution`/`pastAttempts` from `by-qid` (`answer_distribution`+`picked`+`attempt_history`, backend T42). adaptChoices fixed to read `{key,plain}`. | V3,V6,backend-T42 |
 | T6 | x | Anki: real `retention` (else `retrievability`) per card; per-day `reviewed_series` from `/anki/load-adherence` → `ANKI_LOAD` (backend T43). ⊥ lapse-derived/sampled. | V3,V6,backend-T43 |
 | T7 | x | Mastery: `pseudoMastery` removed. Roots overlaid from `/outline/courses/{id}/mastery` at load; browsed subtree from `/outline/nodes/{id}/mastery` on select (backend T44). Unmeasured nodes = 0 (honest, ⊥ fabricated). Home badge → live. | V6,V9,V4,backend-T44 |
-| T8 | . | Connections feed: replace `CONNECTIONS` sample with `concept_edges` read API (?) (recent edges / by-node); via/score/kind from real edges | V6,V9,V4,?backend-T45 |
-| T9 | . | Atomic facts: replace `FACTS` sample with `atomic_facts` read API (?) (by node / by pdf); wire FactsView + NodeFactsList + Review linked-facts | V6,V9,V4,?backend-T46 |
-| T10 | . | Notion pages: replace `NOTION_PAGES` sample with `notion_pages` read API (?) (page index + status) | V6,V9,V4,?backend-T47 |
-| T11 | . | PDFs: replace `PDFS` sample with `pdf_sources` read API (?) (inbox + per-pdf facts) | V6,V9,V4,?backend-T48 |
-| T12 | . | Tutor chat: wire real Socratic turn via MCP host / `window.claude` ⊥ `TUTOR_MESSAGES` mock; keep discriminator save | V5 |
+| T8 | . | Connections feed: `CONNECTIONS` sample removed → EmptyState (Home rail, Outline links tab, Session stat). Wire `concept_edges` read API (?) (recent edges / by-node) when it ships | V6,V9,V4,?backend-T45 |
+| T9 | . | Atomic facts: `FACTS` sample removed → EmptyState (FactsView + NodeFactsList + Review linked-facts + PdfsView). Wire `atomic_facts` read API (?) when it ships | V6,V9,V4,?backend-T46 |
+| T10 | . | Notion pages: `NOTION_PAGES` sample removed → EmptyState (NotionView page index + zeroed StatCards). Wire `notion_pages` read API (?) when it ships | V6,V9,V4,?backend-T47 |
+| T11 | . | PDFs: `PDFS` sample removed → EmptyState (PdfsView). Wire `pdf_sources` read API (?) (inbox + per-pdf facts) when it ships | V6,V9,V4,?backend-T48 |
+| T12 | . | Tutor chat: `TUTOR_MESSAGES` mock removed → EmptyState ("MCP host pending"). Wire real Socratic turn via MCP host / `window.claude`; keep discriminator save | V5 |
 | T13 | . | extend `data/api.ts` with each new endpoint fn + raw type as backend ships; adapters only ⊥ view-level fetch | V3 |
 | T14 | . | audit: assert no domain both live + sample-badged after each wire | V1,V9 |
 
@@ -108,4 +111,5 @@ overlays. Offline fallback stays.
 
 | id | date | cause | fix |
 | B1 | 2026-05-27 | ¶T1/¶T2 scoped "no backend change" but the fields they consume are empty TODO stubs in the backend — `captures.topics` always `[]` (`app/services/tutor/captures.py:30`), session `by_topic`/`top_topics` always `[]` (`sessions.py:85`), and summary has no per-attempt correctness array. Found at build plan time, not test time. | Added ¶V10 (verify payload populated before tagging no-backend). Client adapter `firstTopicNodeId` made forward-compatible (accepts id / `{node_id}` / `{id}`); ¶T1 held at `~`. Backend surfacing tracked in `../SPEC.md` T38. ¶T1/¶T2 cites now flag `?backend-T38`. |
+| B2 | 2026-05-27 | Bundled mock (`data/mock.ts`) was both the store base AND the offline fallback (old ¶V2 "navigable on sample data"). User asked to remove all mock + build empty handlers; naive delete blanks/crashes every empty-or-offline surface (views index `db.X[0]`, `REVIEW_QUESTION.qid`, etc). | Deleted `data/mock.ts`; `baseDB` now empty; backed domains skeleton+empty-state, no-endpoint domains EmptyState, dead controls → no-op `StubButton`. Guards added where views derefed `[0]`/`find`. ¶G/¶C/¶V1/¶V2/¶V6/¶V9 amended; added ¶V11. ¶T8–¶T12 re-scoped sample→empty-state. |
 |----|------|-------|-----|

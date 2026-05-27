@@ -281,6 +281,42 @@ export function LinkRail({ items, dense = false }: { items: any[]; dense?: boole
   )
 }
 
+// Shown when a live read returns zero rows, or for a domain with no endpoint yet
+// (⊥ silent mock). Replaces the old offline sample-data fallback.
+export function EmptyState({ text, hint }: { text: string; hint?: string }) {
+  return (
+    <div style={{ padding: '26px 16px', textAlign: 'center' }}>
+      <div style={{ font: '500 13px var(--sans)', color: 'var(--ink-2)' }}>{text}</div>
+      {hint && <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginTop: 3 }}>{hint}</div>}
+    </div>
+  )
+}
+
+// No-op handler for a control whose backing action isn't wired yet. Logs a TODO
+// so the wiring point is greppable; `name` identifies the action/endpoint.
+export const stubAction = (name: string) => console.debug('[stub] TODO: wire', name)
+
+// A button that is visible + clickable but inert: greyed (visual indicator) and
+// wired to stubAction. Children carry the icon/label/kbd so all tb-btn variants
+// (ghost/primary) are preserved via className.
+export function StubButton({
+  children, name, className = 'tb-btn', title, style
+}: {
+  children: React.ReactNode; name: string; className?: string; title?: string; style?: CSS
+}) {
+  return (
+    <button
+      className={className}
+      data-stub
+      title={title ?? `Not wired yet — ${name}`}
+      onClick={() => stubAction(name)}
+      style={{ opacity: 0.55, ...style }}
+    >
+      {children}
+    </button>
+  )
+}
+
 export function StatCard({
   label, value, sub, accent = 'ink', footer, onClick
 }: {
