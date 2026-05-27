@@ -206,7 +206,7 @@ function NodeAnkiList() {
 export function NodeFactsList() {
   const db = useDB()
   if (db.FACTS.length === 0) {
-    return <div className="card"><EmptyState text="No atomic facts" hint="PDF-ingest / atomic-fact endpoint pending (P2)" /></div>
+    return <div className="card"><EmptyState text="No atomic facts" hint="no facts grounded to this node yet" /></div>
   }
   return (
     <div className="card" style={{ padding: 4 }}>

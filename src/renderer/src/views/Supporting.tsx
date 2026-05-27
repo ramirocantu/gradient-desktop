@@ -8,6 +8,7 @@ import type { View } from '.'
 // ───────────────────────── ATOMIC FACTS ─────────────────────────
 export function FactsView() {
   const db = useDB()
+  const { status } = useStore()
   return (
     <div className="content-scroll">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
@@ -18,7 +19,9 @@ export function FactsView() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span className="stub-badge" title="PDF-ingest / atomic-fact workflow is P2 — no endpoint yet">no endpoint</span>
+          {status.live.has('facts')
+            ? <span className="badge moss" style={{ height: 18, padding: '0 6px' }}><span className="d" />live</span>
+            : <span className="stub-badge" title="atomic_facts read endpoint (T46)">no endpoint</span>}
           <StubButton name="facts-filter" className="tb-btn ghost"><Icon name="filter" size={11} /> Filter</StubButton>
         </div>
       </div>
@@ -28,7 +31,7 @@ export function FactsView() {
           <span style={{ textAlign: 'right' }}>Page</span>
           <span style={{ textAlign: 'right' }}>Version</span>
         </div>
-        {db.FACTS.length === 0 && <EmptyState text="No atomic facts" hint="PDF-ingest / atomic-fact endpoint pending (P2)" />}
+        {db.FACTS.length === 0 && <EmptyState text="No atomic facts" hint={status.live.has('facts') ? 'no facts ingested yet — run the PDF-ingest pipeline' : 'backend offline'} />}
         {db.FACTS.map((f, i) => {
           const node = db.NODE_BY_ID[f.node]
           return (

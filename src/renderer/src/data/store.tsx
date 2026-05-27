@@ -5,7 +5,7 @@ import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
 import type {
   DB, Course, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
-  SystemStatusT, NodeMasteryT, TodayT, ConnectionT
+  SystemStatusT, NodeMasteryT, TodayT, ConnectionT, FactT
 } from '../types'
 
 // ───────────────────────── empty base (⊥ mock) ─────────────────────────
@@ -178,6 +178,25 @@ function adaptEdges(rows: API.ConceptEdgeOut[], byId: Record<number, OutlineNode
   }))
 }
 
+// Filename without a trailing ".pdf" — views append/format the extension.
+function pdfStem(name: string | null, fallbackId: number): string {
+  if (!name) return `pdf ${fallbackId}`
+  return name.replace(/\.pdf$/i, '')
+}
+
+// ¶T9: atomic_facts → FactT. `version` (extractor_version) lives on
+// atomic_fact_tags, not the /atomic-facts payload (§I) → shown as "—".
+function adaptFacts(rows: API.AtomicFactOut[]): FactT[] {
+  return rows.map((f) => ({
+    id: `f-${f.id}`,
+    text: f.text,
+    node: f.node_id ?? 0,
+    pdf: pdfStem(f.pdf_source.filename, f.pdf_source.id),
+    page: f.page ?? 0,
+    version: '—'
+  }))
+}
+
 function adaptAnkiQueue(rows: API.AnkiCardOut[]): AnkiCardT[] {
   return rows.map((c) => {
     const firstField =
@@ -227,7 +246,8 @@ function adaptChoices(
 
 function adaptQuestion(
   q: API.QuestionDetail,
-  cards: API.AnkiCardOut[]
+  cards: API.AnkiCardOut[],
+  facts: API.AtomicFactOut[] = []
 ): ReviewQuestionT {
   const tags = q.tags.map((t) => ({
     node: t.node_id,
@@ -263,7 +283,13 @@ function adaptQuestion(
       interval: c.interval,
       due: c.due
     })),
-    linkedFacts: [] // atomic facts are P2 (no endpoint)
+    // ¶T9: atomic facts grounded to the question's node (by-node read).
+    linkedFacts: facts.map((f) => ({
+      id: `f-${f.id}`,
+      text: f.text,
+      pdf: pdfStem(f.pdf_source.filename, f.pdf_source.id),
+      page: f.page ?? 0
+    }))
   }
 }
 
@@ -383,7 +409,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ankiQ: API.getAnkiReviewQueue(),
           loadCfg: API.getLoadConfig(),
           adherence: API.getLoadAdherence(),
-          edges: API.getConceptEdges({ limit: 50 })
+          edges: API.getConceptEdges({ limit: 50 }),
+          facts: API.getAtomicFacts({ limit: 200 })
         })
         if (r.flagged) {
           live.add('flagged')
@@ -438,6 +465,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           next.CONNECTIONS = adaptEdges(r.edges, next.NODE_BY_ID)
           next.TODAY = { ...next.TODAY, newConnections: r.edges.length }
         }
+        // ¶T9: atomic_facts feed (live, even when empty → ⊥ keep mock).
+        if (r.facts !== undefined) {
+          live.add('facts')
+          next.FACTS = adaptFacts(r.facts)
+          next.COURSE = { ...next.COURSE, factCount: r.facts.length }
+        }
       }
 
       if (!cancelled) {
@@ -462,7 +495,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const q = await API.getQuestionByQid(qid)
       let cards: API.AnkiCardOut[] = []
       try { cards = await API.getCardsByQid(qid) } catch { /* ok */ }
-      return adaptQuestion(q, cards)
+      // ¶T9: linked atomic facts grounded to the question's primary node.
+      let facts: API.AtomicFactOut[] = []
+      const nodeId = q.tags[0]?.node_id
+      if (nodeId != null) {
+        try { facts = await API.getAtomicFacts({ node_id: nodeId, limit: 8 }) } catch { /* ok */ }
+      }
+      return adaptQuestion(q, cards, facts)
     } catch {
       return null
     }

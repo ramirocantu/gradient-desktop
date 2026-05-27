@@ -237,6 +237,18 @@ export interface ConceptEdgeOut {
 export const getConceptEdges = (params: { node_id?: number; kind?: string; limit?: number } = {}) =>
   api<ConceptEdgeOut[]>('/api/v1/concept-edges', { query: params })
 
+export interface AtomicFactOut {
+  id: number
+  text: string
+  node_id: number | null
+  page: number | null
+  pdf_source: { id: number; filename: string | null }
+  created_at: string
+  // NOTE: extractor_version lives on atomic_fact_tags (§I), not surfaced here.
+}
+export const getAtomicFacts = (params: { node_id?: number; pdf_source_id?: number; limit?: number } = {}) =>
+  api<AtomicFactOut[]>('/api/v1/atomic-facts', { query: params })
+
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>
   api<ApiCourse>('/api/v1/courses', { method: 'POST', body: { slug, name, description } })

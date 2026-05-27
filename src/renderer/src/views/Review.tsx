@@ -166,7 +166,7 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
             <div className="card" style={{ padding: 4 }}>
               {Q.linkedFacts.length === 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', font: '500 12.5px var(--sans)', color: 'var(--ink-3)' }}>
-                  <KindGlyph kind="fact" /> Atomic facts land with the PDF-ingest workflow (P2) <span className="stub-badge" style={{ marginLeft: 'auto' }}>no endpoint</span>
+                  <KindGlyph kind="fact" /> No atomic facts grounded to this node yet
                 </div>
               ) : Q.linkedFacts.map((f, i) => (
                 <div key={f.id} className="item" style={{ display: 'grid', gridTemplateColumns: '16px 1fr auto auto', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 7, borderBottom: i === Q.linkedFacts.length - 1 ? 'none' : '0.5px solid var(--hair-2)' }}>
