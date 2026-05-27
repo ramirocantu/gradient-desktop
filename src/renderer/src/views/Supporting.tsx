@@ -67,6 +67,10 @@ export function AnkiView() {
   const target = db.TODAY.ankiTarget
   const due = db.ANKI_QUEUE.length
   const completed = db.TODAY.ankiCompleted
+  // Adherence from live series when present, else mock figures.
+  const seriesLive = status.live.has('anki-series')
+  const daysAtTarget = db.ANKI_LOAD.filter((v) => v >= target).length
+  const adherencePct = db.ANKI_LOAD.length ? Math.round((daysAtTarget / db.ANKI_LOAD.length) * 100) : 0
 
   return (
     <div className="content-scroll">
@@ -84,7 +88,7 @@ export function AnkiView() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 24 }}>
         <StatCard label="Due today" value={due} accent="plum" sub="cards" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="tnum">{Math.min(12, due)}</span> overdue · <span className="tnum">{Math.max(0, due - 12)}</span> due now</div>} />
         <StatCard label="Today's load" value={`${completed}/${target}`} accent="moss" sub="reviewed" footer={<div style={{ height: 4, borderRadius: 999, background: 'rgba(40,30,15,0.06)', overflow: 'hidden' }}><div style={{ height: '100%', width: `${(completed / target) * 100}%`, background: 'var(--moss)' }} /></div>} />
-        <StatCard label="Adherence" value="83%" accent="clay" sub="last 30 days" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}><span className="tnum">24</span> of 30 days at target</div>} />
+        <StatCard label="Adherence" value={seriesLive ? `${adherencePct}%` : '83%'} accent="clay" sub="last 30 days" footer={<div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)' }}>{seriesLive ? <><span className="tnum">{daysAtTarget}</span> of {db.ANKI_LOAD.length} days at target</> : <><span className="tnum">24</span> of 30 days at target</>}</div>} />
       </div>
 
       <div style={{ marginBottom: 28 }}>

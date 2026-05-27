@@ -379,10 +379,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           live.add('anki-load')
           next.TODAY = { ...next.TODAY, ankiTarget: r.loadCfg.daily_card_review_budget }
         }
-        // T43: real per-day reviewed series for the adherence chart
-        if (r.adherence?.reviewed_series?.length) {
+        // T43: real per-day reviewed series + today's reviewed count.
+        // Fetched (even empty) is live data → ⊥ keep mock series/completed.
+        if (r.adherence !== undefined) {
           live.add('anki-series')
-          next.ANKI_LOAD = r.adherence.reviewed_series.map((d) => d.reviewed)
+          const series = r.adherence?.reviewed_series ?? []
+          next.ANKI_LOAD = series.map((d) => d.reviewed)
+          next.TODAY = {
+            ...next.TODAY,
+            ankiCompleted: series.length ? series[series.length - 1].reviewed : 0
+          }
         }
         // Review resume target: point at a REAL qid (flagged, else recent
         // capture) so by-qid resolves live — ⊥ the hardcoded mock qid (404).
