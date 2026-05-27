@@ -152,8 +152,11 @@ export function AnkiView() {
 // ───────────────────────── PDFs ─────────────────────────
 export function PdfsView() {
   const db = useDB()
+  const { status } = useStore()
   const [selected, setSelected] = React.useState(db.PDFS[0]?.id)
   const pdf = db.PDFS.find((p) => p.id === selected) || db.PDFS[0]
+  // facts grounded to the selected PDF (FactT.pdf is the filename stem)
+  const pdfFacts = pdf ? db.FACTS.filter((f) => f.pdf === pdf.filename.replace(/\.pdf$/i, '')) : []
   // No pdf_sources endpoint yet → empty-state (⊥ crash on pdf.sha / sample list).
   if (!pdf) {
     return (
@@ -166,7 +169,7 @@ export function PdfsView() {
           <StubButton name="pdf-add" className="tb-btn primary"><Icon name="plus" size={11} color="var(--canvas)" /> Add</StubButton>
         </div>
         <div className="card">
-          <EmptyState text="No PDFs" hint="PDF-ingest endpoint pending (P2)" />
+          <EmptyState text="No PDFs" hint={status.live.has('pdfs') ? 'no PDFs ingested yet — run the ingest pipeline' : 'backend offline'} />
         </div>
       </div>
     )
@@ -183,7 +186,7 @@ export function PdfsView() {
           {db.PDFS.map((p) => {
             const node = p.node != null ? db.NODE_BY_ID[p.node] : null
             const isSel = p.id === selected
-            const statusColor = ({ ingested: 'var(--moss)', extracting: 'var(--amber)', 'needs-tagging': 'oklch(0.62 0.18 30)' } as Record<string, string>)[p.status]
+            const statusColor = ({ ingested: 'var(--moss)', parsing: 'var(--amber)', pending: 'var(--ink-4)', failed: 'oklch(0.62 0.18 30)' } as Record<string, string>)[p.status]
             return (
               <div key={p.id} onClick={() => setSelected(p.id)} style={{ padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: isSel ? 'var(--panel)' : 'transparent', border: isSel ? '0.5px solid var(--hair)' : '0.5px solid transparent', boxShadow: isSel ? 'var(--shadow-sm)' : 'none', marginBottom: 2 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -191,7 +194,7 @@ export function PdfsView() {
                   <span style={{ font: '500 12.5px var(--sans)', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{p.filename}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, font: '500 11px var(--sans)', color: 'var(--ink-3)' }}>
-                  <span className="tnum">{p.pages}p</span> · <span className="tnum">{p.factsCount}</span> facts · <span>{p.ingestedAt}</span>
+                  {p.pages > 0 && <><span className="tnum">{p.pages}p</span> · </>}<span className="tnum">{p.factsCount}</span> facts · <span>{p.ingestedAt}</span>
                 </div>
                 {node && <div style={{ marginTop: 5, font: '500 11px var(--sans)', color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>→ {node.name}</div>}
               </div>
@@ -204,17 +207,20 @@ export function PdfsView() {
         <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginBottom: 4 }}>PDF · {pdf.sha}</div>
         <h1 className="h1" style={{ fontSize: 24 }}>{pdf.filename}</h1>
         <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-          <span className="badge moss"><span className="d" />{pdf.status}</span>
-          <span className="badge"><span className="d" /><span className="tnum">{pdf.pages}</span> pages</span>
+          <span className={`badge ${pdf.status === 'ingested' ? 'moss' : 'amber'}`}><span className="d" />{pdf.status}</span>
+          {pdf.pages > 0 && <span className="badge"><span className="d" /><span className="tnum">{pdf.pages}</span> pages</span>}
           <span className="badge"><span className="d" /><span className="tnum">{pdf.factsCount}</span> atomic facts</span>
           <span className="badge slate"><span className="d" />ingested {pdf.ingestedAt}</span>
-          <span className="stub-badge">no endpoint</span>
+          {status.live.has('pdfs')
+            ? <span className="badge moss"><span className="d" />live</span>
+            : <span className="stub-badge" title="pdf_sources inbox read endpoint (T48)">no endpoint</span>}
         </div>
         <div style={{ marginTop: 22 }}>
           <h3 className="section-title">Atomic facts · grounded to this PDF</h3>
           <div className="card" style={{ padding: 4 }}>
-            {db.FACTS.map((f, i) => (
-              <div key={f.id} className="item" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 100px', gap: 12, alignItems: 'center', padding: '11px 12px', borderBottom: i === db.FACTS.length - 1 ? 'none' : '0.5px solid var(--hair-2)' }}>
+            {pdfFacts.length === 0 && <EmptyState text="No atomic facts" hint="no facts grounded to this PDF yet" />}
+            {pdfFacts.map((f, i) => (
+              <div key={f.id} className="item" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 100px', gap: 12, alignItems: 'center', padding: '11px 12px', borderBottom: i === pdfFacts.length - 1 ? 'none' : '0.5px solid var(--hair-2)' }}>
                 <KindGlyph kind="fact" />
                 <span style={{ font: '400 14px/1.5 var(--serif)', color: 'var(--ink)' }}>{f.text}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>

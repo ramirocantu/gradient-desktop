@@ -262,6 +262,21 @@ export interface NotionPageOut {
 export const getNotionPages = (params: { node_id?: number } = {}) =>
   api<NotionPageOut[]>('/api/v1/notion/pages', { query: params })
 
+export interface PdfSourceOut {
+  id: number
+  filename: string
+  sha256: string
+  status: string // 'pending' | 'parsing' | 'ingested' | 'failed'
+  facts_count: number
+  course_id: number
+  ingested_at: string | null
+  created_at: string
+  // NOTE: page count / node_id are not modeled on pdf_sources (§I) —
+  // pdf_sources is course-scoped; facts carry node_id.
+}
+export const getPdfSources = (params: { course_id?: number; status?: string; limit?: number } = {}) =>
+  api<PdfSourceOut[]>('/api/v1/pdf-sources', { query: params })
+
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>
   api<ApiCourse>('/api/v1/courses', { method: 'POST', body: { slug, name, description } })

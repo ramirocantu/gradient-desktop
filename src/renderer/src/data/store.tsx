@@ -5,7 +5,7 @@ import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
 import type {
   DB, Course, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
-  SystemStatusT, NodeMasteryT, TodayT, ConnectionT, FactT, NotionPageT
+  SystemStatusT, NodeMasteryT, TodayT, ConnectionT, FactT, NotionPageT, PdfT
 } from '../types'
 
 // ───────────────────────── empty base (⊥ mock) ─────────────────────────
@@ -209,6 +209,22 @@ function adaptNotionPages(rows: API.NotionPageOut[], byId: Record<number, Outlin
     lastSynced: relTime(p.last_synced_at),
     status: p.last_synced_at ? 'synced' : 'pending',
     url: p.url ?? null
+  }))
+}
+
+// ¶T11: pdf_sources inbox → PdfT. `pages` (page count) and per-PDF `node` are
+// not modeled (§I — pdf_sources is course-scoped); pages → 0 (view shows "—"),
+// node → null. `factsCount` is the route's atomic_facts rollup.
+function adaptPdfs(rows: API.PdfSourceOut[]): PdfT[] {
+  return rows.map((p) => ({
+    id: `pdf-${p.id}`,
+    filename: p.filename,
+    pages: 0,
+    status: p.status,
+    factsCount: p.facts_count,
+    ingestedAt: p.ingested_at ? relTime(p.ingested_at) : '—',
+    node: null,
+    sha: p.sha256
   }))
 }
 
@@ -426,7 +442,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           adherence: API.getLoadAdherence(),
           edges: API.getConceptEdges({ limit: 50 }),
           facts: API.getAtomicFacts({ limit: 200 }),
-          notionPages: API.getNotionPages()
+          notionPages: API.getNotionPages(),
+          pdfs: API.getPdfSources()
         })
         if (r.flagged) {
           live.add('flagged')
@@ -492,6 +509,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           live.add('notion')
           next.NOTION_PAGES = adaptNotionPages(r.notionPages, next.NODE_BY_ID)
           next.COURSE = { ...next.COURSE, notionPageCount: r.notionPages.length }
+        }
+        // ¶T11: pdf_sources inbox (live, even when empty → ⊥ keep mock).
+        if (r.pdfs !== undefined) {
+          live.add('pdfs')
+          next.PDFS = adaptPdfs(r.pdfs)
+          next.TODAY = { ...next.TODAY, pdfNew: r.pdfs.length }
         }
       }
 
