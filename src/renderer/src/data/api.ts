@@ -153,7 +153,21 @@ export const getCardsByQid = (qid: string) =>
 export const getLoadAdherence = () =>
   api<LoadAdherence>('/api/v1/anki/load-adherence')
 export const getLoadConfig = () => api<LoadConfig>('/api/v1/anki/load-config')
-export const getAdminJobs = () => api<unknown>('/api/v1/admin/jobs')
+
+export interface Healthz {
+  db_reachable: boolean
+  db_error: string | null
+  attempt_count: number
+  latest_attempt_at: string | null
+  recommender_ready: boolean
+  backend_base_url: string
+}
+export interface SchedulerJob {
+  job_id: string
+  next_run_time: string | null
+}
+export const getTutorHealthz = () => api<Healthz>('/api/v1/tutor/healthz')
+export const getAdminJobs = () => api<SchedulerJob[]>('/api/v1/admin/jobs')
 
 // ── writes ──
 export const createCourse = (slug: string, name: string, description?: string) =>

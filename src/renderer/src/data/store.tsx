@@ -5,7 +5,8 @@ import { ApiError, cfg } from './client'
 import { settleAll } from './settle'
 import { buildNodeIndex, makeNodePath, pseudoMastery, deriveAbbr } from '../helpers'
 import type {
-  DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT
+  DB, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
+  SystemStatusT
 } from '../types'
 
 // ───────────────────────── relative-time helper ─────────────────────────
@@ -211,6 +212,7 @@ export interface Store {
   refresh: () => void
   loadQuestion: (qid: string) => Promise<ReviewQuestionT | null>
   loadSessionSummary: (testId: string) => Promise<SessionDetailT | null>
+  loadSystemStatus: () => Promise<SystemStatusT | null>
   saveDiscriminator: (factor: string, questionId: number, nodeId?: number) => Promise<boolean>
   createCourse: (slug: string, name: string) => Promise<API.ApiCourse | null>
   importOutline: (courseId: number, schema: unknown) => Promise<boolean>
@@ -361,6 +363,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const loadSystemStatus = React.useCallback(async (): Promise<SystemStatusT | null> => {
+    // ¶V7: healthz + jobs isolated — one failing read still yields the other.
+    const r = await settleAll({ health: API.getTutorHealthz(), jobs: API.getAdminJobs() })
+    if (!r.health && !r.jobs) return null
+    return {
+      dbReachable: r.health?.db_reachable ?? false,
+      attemptCount: r.health?.attempt_count ?? 0,
+      jobIds: (r.jobs ?? []).map((j) => j.job_id)
+    }
+  }, [])
+
   const saveDiscriminator = React.useCallback(
     async (factor: string, questionId: number, nodeId?: number) => {
       try {
@@ -382,7 +395,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [refresh])
 
   const store: Store = {
-    db, status, refresh, loadQuestion, loadSessionSummary, saveDiscriminator, createCourse, importOutline
+    db, status, refresh, loadQuestion, loadSessionSummary, loadSystemStatus, saveDiscriminator, createCourse, importOutline
   }
   return <StoreCtx.Provider value={store}>{children}</StoreCtx.Provider>
 }

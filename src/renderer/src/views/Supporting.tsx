@@ -389,15 +389,25 @@ export function CapturesView() {
 // ───────────────────────── SETTINGS ─────────────────────────
 export function SettingsView({ setView }: { setView: (v: View) => void }) {
   const db = useDB()
-  const { status } = useStore()
-  const apiStatus = status.online ? 'connected' : 'offline'
+  const { status, loadSystemStatus } = useStore()
+
+  // Live probe (¶T3): /tutor/healthz (API+DB) + /admin/jobs (scheduled jobs).
+  // Notion/OpenAI/MCP have no probe endpoint yet → shown as "scheduled"/"unknown",
+  // not "connected" (¶V1: ⊥ claim health we can't verify). Backend status endpoint
+  // tracked in ../SPEC.md T39.
+  const sys = useAsync(
+    () => (status.online && status.hasToken ? loadSystemStatus() : Promise.resolve(null)),
+    [status.online, status.hasToken]
+  )
+  const has = (job: string) => sys.data?.jobIds.includes(job) ?? false
   const conns = [
-    { name: 'Gradient API', desc: `${status.apiBase} · X-Coach-Token`, status: apiStatus, detail: status.online ? `${status.live.size} live data sources this session` : 'Unreachable — start uvicorn on :8000' },
-    { name: 'AnkiConnect', desc: '127.0.0.1:8765 · read + allowlisted writes', status: status.live.has('anki') ? 'connected' : 'unknown', detail: status.live.has('anki') ? `${db.ANKI_QUEUE.length} cards in review queue` : 'No live queue this session' },
-    { name: 'Notion', desc: 'Write-out only · one page per outline node', status: 'unknown', detail: 'Sync workflow is P2' },
-    { name: 'OpenAI', desc: 'tagging · calibrator · embeddings', status: 'connected', detail: 'gpt-4.1-mini · text-embedding-3-small (dim 1536)' },
+    { name: 'Gradient API', desc: `${status.apiBase} · X-Coach-Token`, status: status.online ? 'connected' : 'offline', detail: status.online ? `${status.live.size} live data sources this session` : 'Unreachable — start uvicorn on :8000' },
+    { name: 'Postgres', desc: 'app DB · asyncpg', status: sys.data ? (sys.data.dbReachable ? 'connected' : 'offline') : 'unknown', detail: sys.data ? `${sys.data.attemptCount.toLocaleString()} attempts recorded` : 'probing…' },
+    { name: 'AnkiConnect', desc: '127.0.0.1:8765 · read + allowlisted writes', status: status.live.has('anki') ? 'connected' : has('run_anki_sync') ? 'scheduled' : 'unknown', detail: status.live.has('anki') ? `${db.ANKI_QUEUE.length} cards in review queue` : has('run_anki_sync') ? 'sync job scheduled (health not probed)' : 'no live queue this session' },
+    { name: 'OpenAI', desc: 'tagging · calibrator · embeddings', status: has('run_categorizer') ? 'scheduled' : 'unknown', detail: has('run_categorizer') ? 'categorizer job scheduled (reachability not probed)' : 'no probe endpoint yet' },
+    { name: 'Notion', desc: 'Write-out only · one page per outline node', status: 'unknown', detail: 'no probe endpoint yet · sync workflow P2' },
     { name: 'MCP host', desc: 'Socratic tutor seam · X-Coach-Token', status: status.hasToken ? 'connected' : 'no token', detail: status.hasToken ? 'X-Coach-Token present' : 'Set COACH_TOKEN in the environment' },
-    { name: 'Chrome extension', desc: 'UWorld + generic web Qbank capture', status: 'connected', detail: 'POST /api/v1/captures' }
+    { name: 'Chrome extension', desc: 'UWorld + generic web Qbank capture', status: 'unknown', detail: 'inbound only · POST /api/v1/captures' }
   ]
   const dot = (st: string) => (st === 'connected' ? 'var(--moss)' : st === 'offline' ? 'oklch(0.62 0.18 30)' : 'var(--amber)')
 

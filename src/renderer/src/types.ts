@@ -190,6 +190,15 @@ export interface DB {
   TODAY: TodayT
 }
 
+// Live system status for the Settings connections panel (¶T3), adapted from
+// /tutor/healthz + /admin/jobs. Only API/DB + scheduled-job presence are
+// probeable today; Notion/OpenAI/MCP reachability await a backend status endpoint.
+export interface SystemStatusT {
+  dbReachable: boolean
+  attemptCount: number
+  jobIds: string[]
+}
+
 // Which domains are backed by a real endpoint vs. always-mock (P2 / fenced).
 export type Domain =
   | 'course' | 'outline' | 'flagged' | 'sessions' | 'captures'
