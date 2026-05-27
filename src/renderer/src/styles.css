@@ -1,0 +1,501 @@
+/* Gradient — design tokens (ported verbatim from the Claude Design proposal) */
+
+:root {
+  /* type */
+  --serif: "Newsreader", "Source Serif Pro", Georgia, serif;
+  --sans: "Geist", ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* warm paper palette */
+  --paper: oklch(0.972 0.012 80);          /* outer / desktop */
+  --canvas: oklch(0.985 0.010 82);         /* main content */
+  --panel: oklch(0.995 0.006 82);          /* cards, raised */
+  --sunken: oklch(0.955 0.014 80);         /* sidebar wash, code, attempts strip */
+  --wash:   oklch(0.965 0.011 80);         /* very subtle alt */
+
+  /* ink */
+  --ink:    oklch(0.215 0.025 50);         /* primary text */
+  --ink-2:  oklch(0.380 0.022 50);         /* secondary text */
+  --ink-3:  oklch(0.555 0.018 55);         /* tertiary / metadata */
+  --ink-4:  oklch(0.700 0.013 60);         /* placeholder */
+  --hair:   oklch(0.870 0.015 70);         /* borders */
+  --hair-2: oklch(0.910 0.012 70);         /* faint borders */
+
+  /* accents */
+  --clay:    oklch(0.62 0.14 45);          /* primary accent — warm rust/clay */
+  --clay-2:  oklch(0.94 0.05 55);          /* clay wash */
+  --moss:    oklch(0.60 0.10 145);         /* mastery high / correct */
+  --moss-2:  oklch(0.93 0.04 145);
+  --amber:   oklch(0.72 0.13 80);          /* needs review / caution */
+  --amber-2: oklch(0.94 0.06 85);
+  --plum:    oklch(0.50 0.10 320);         /* anki link */
+  --plum-2:  oklch(0.93 0.03 320);
+  --slate:   oklch(0.55 0.03 240);         /* notion / external */
+  --slate-2: oklch(0.93 0.012 240);
+
+  /* mastery scale (5 stops, warm cream → moss) */
+  --m0: oklch(0.94 0.018 70);
+  --m1: oklch(0.90 0.045 95);
+  --m2: oklch(0.84 0.075 110);
+  --m3: oklch(0.74 0.090 130);
+  --m4: oklch(0.62 0.100 145);
+
+  /* radii / shadow */
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --shadow-sm: 0 1px 2px rgba(50,40,20,0.04), 0 0.5px 0 rgba(50,40,20,0.05);
+  --shadow-md: 0 2px 8px rgba(50,40,20,0.05), 0 1px 0 rgba(50,40,20,0.04);
+  --shadow-lg: 0 8px 24px rgba(50,40,20,0.08), 0 1px 0 rgba(50,40,20,0.05);
+  --shadow-window: 0 0 0 0.5px rgba(50,40,20,0.20), 0 30px 80px rgba(40,30,15,0.30), 0 8px 18px rgba(40,30,15,0.18);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; height: 100%; width: 100%; }
+body {
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv01", "cv11";
+  color: var(--ink);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* In Electron the OS window IS the chrome, so the app fills the viewport
+   rather than floating on a faux desktop surround (the design prototype ran in
+   a browser and drew its own window frame). */
+.desktop {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+.window {
+  width: 100%;
+  height: 100%;
+  background: var(--canvas);
+  overflow: hidden;
+  display: flex;
+  position: relative;
+}
+
+/* Native macOS traffic lights sit over this region (titleBarStyle hiddenInset);
+   make the strip draggable so the window can be moved by its top edge. */
+.traffic {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 30px;
+  padding: 14px 14px 0;
+  -webkit-app-region: drag;
+}
+.traffic .dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.18);
+  -webkit-app-region: no-drag;
+}
+.traffic .dot.r { background: #ff5f57; }
+.traffic .dot.y { background: #febc2e; }
+.traffic .dot.g { background: #28c840; }
+
+/* sidebar */
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--sunken);
+  border-right: 0.5px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar .scroll { flex: 1; overflow-y: auto; padding: 4px 0 14px; }
+
+/* course picker — docked at the bottom of the sidebar, on the shared 12px
+   gutter so its left edge and swatch line up with the nav-item rows above */
+.course-dock { flex-shrink: 0; }
+.course-pill {
+  margin: 8px 12px 10px;
+  padding: 11px 12px;
+  background: var(--panel);
+  border: 0.5px solid var(--hair);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.course-pill:hover { background: var(--canvas); }
+.course-pill .swatch {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--clay), var(--amber));
+  display: grid; place-items: center;
+  color: white;
+  font: 600 11px var(--sans);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.course-pill .meta { flex: 1; min-width: 0; }
+.course-pill .name {
+  font: 600 12.5px var(--sans);
+  color: var(--ink);
+  line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.course-pill .sub {
+  font: 11px var(--sans);
+  color: var(--ink-3);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.course-pill .chevron {
+  color: var(--ink-3);
+  font-size: 10px;
+}
+
+.nav-section-label {
+  font: 600 10px var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 16px 14px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px 6px 12px;
+  margin: 0 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--ink-2);
+  font: 500 13px var(--sans);
+  line-height: 1.4;
+  position: relative;
+  white-space: nowrap;
+}
+.nav-item > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-item:hover { background: rgba(40,30,15,0.04); color: var(--ink); }
+.nav-item.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 0 0 0.5px var(--hair), var(--shadow-sm);
+}
+.nav-item .ico {
+  width: 16px; height: 16px;
+  display: grid; place-items: center;
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+.nav-item.active .ico { color: var(--clay); }
+.nav-item .count {
+  margin-left: auto;
+  font: 500 11px var(--mono);
+  color: var(--ink-3);
+  background: rgba(40,30,15,0.05);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.nav-item.active .count { background: var(--clay-2); color: var(--clay); }
+
+.sidebar .footer {
+  border-top: 0.5px solid var(--hair);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+/* status bar doubles as the Settings entry */
+.sidebar .footer.footer-settings {
+  cursor: pointer;
+  color: var(--ink-2);
+  font: 500 13px var(--sans);
+}
+.sidebar .footer.footer-settings:hover { background: rgba(40,30,15,0.04); color: var(--ink); }
+.sidebar .footer.footer-settings.active { color: var(--ink); }
+.sidebar .footer.footer-settings .ico {
+  width: 16px; height: 16px;
+  display: grid; place-items: center;
+  color: var(--ink-3); flex-shrink: 0;
+}
+.sidebar .footer.footer-settings.active .ico { color: var(--clay); }
+.sidebar .footer .status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--moss);
+  box-shadow: 0 0 0 2px var(--moss-2);
+}
+.sidebar .footer .status-dot.offline {
+  background: var(--ink-4);
+  box-shadow: 0 0 0 2px rgba(40,30,15,0.06);
+}
+.sidebar .footer .status-text {
+  font: 500 11px var(--sans);
+  color: var(--ink-3);
+}
+
+/* main content */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--canvas);
+  height: 100%;
+}
+
+.toolbar {
+  height: 44px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 0.5px solid var(--hair);
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+.toolbar .crumb {
+  font: 500 12.5px var(--sans);
+  color: var(--ink-3);
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+.toolbar .crumb .sep { color: var(--ink-4); }
+.toolbar .crumb .leaf { color: var(--ink); font-weight: 600; }
+
+.toolbar .spacer { flex: 1; }
+.tb-btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: transparent;
+  border: 0.5px solid transparent;
+  color: var(--ink-2);
+  font: 500 12px var(--sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+.tb-btn:hover { background: rgba(40,30,15,0.04); }
+.tb-btn.primary {
+  background: var(--ink);
+  color: var(--canvas);
+  border-color: var(--ink);
+}
+.tb-btn.primary:hover { background: oklch(0.16 0.025 50); }
+.tb-btn.ghost { border-color: var(--hair); }
+.tb-btn .kbd {
+  font: 500 10.5px var(--mono);
+  color: var(--ink-3);
+  padding: 1px 5px;
+  background: rgba(40,30,15,0.05);
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  min-height: 0;
+}
+.content-scroll { flex: 1; padding: 24px 32px 48px; min-width: 0; }
+.content-scroll.tight { padding: 18px 22px 36px; }
+
+/* common primitives */
+.card {
+  background: var(--panel);
+  border: 0.5px solid var(--hair);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.card.flat { box-shadow: none; }
+
+.section-title {
+  font: 600 11px var(--sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 10px;
+}
+
+.h1 {
+  font: 500 30px/1.15 var(--serif);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.h2 {
+  font: 500 21px/1.25 var(--serif);
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+.h3 {
+  font: 600 14.5px var(--sans);
+  color: var(--ink);
+  margin: 0;
+}
+.lede {
+  font: 400 15px/1.5 var(--serif);
+  color: var(--ink-2);
+  margin: 0;
+}
+.muted { color: var(--ink-3); }
+.tnum { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); }
+
+/* badges / chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
+  font: 500 11px var(--sans);
+  background: rgba(40,30,15,0.05);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.badge .d {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ink-3);
+}
+.badge.clay { background: var(--clay-2); color: oklch(0.42 0.13 45); }
+.badge.clay .d { background: var(--clay); }
+.badge.moss { background: var(--moss-2); color: oklch(0.40 0.10 145); }
+.badge.moss .d { background: var(--moss); }
+.badge.amber { background: var(--amber-2); color: oklch(0.45 0.13 65); }
+.badge.amber .d { background: var(--amber); }
+.badge.plum { background: var(--plum-2); color: oklch(0.40 0.10 320); }
+.badge.plum .d { background: var(--plum); }
+.badge.slate { background: var(--slate-2); color: oklch(0.40 0.03 240); }
+.badge.slate .d { background: var(--slate); }
+.badge.flagged { background: oklch(0.95 0.04 30); color: oklch(0.42 0.13 30); }
+.badge.flagged .d { background: oklch(0.62 0.18 30); }
+
+.kbd {
+  font: 500 10.5px var(--mono);
+  color: var(--ink-3);
+  padding: 1px 5px;
+  background: rgba(40,30,15,0.05);
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+  border: 0.5px solid var(--hair);
+}
+
+/* generic divider */
+.hr { height: 0.5px; background: var(--hair); border: 0; margin: 0; }
+.vr { width: 0.5px; background: var(--hair); align-self: stretch; }
+
+/* link rail (for inbound/outbound items) */
+.linkrail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.linkrail .item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font: 13px var(--sans);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.linkrail .item:hover { background: rgba(40,30,15,0.035); color: var(--ink); }
+.linkrail .item .kind {
+  font: 500 10.5px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  width: 38px;
+}
+.linkrail .item .arrow { color: var(--ink-4); }
+.linkrail .item .title {
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(40,30,15,0.12);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(40,30,15,0.22); background-clip: content-box; }
+
+/* selection */
+::selection { background: var(--clay-2); color: var(--ink); }
+
+/* mastery cells */
+.m-cell {
+  border-radius: 3px;
+  width: 100%;
+  height: 100%;
+}
+
+/* ───────────────── app-only additions (not in the prototype) ───────────────── */
+
+/* "this surface has no backend endpoint yet" marker (P2 / fenced domains) */
+.stub-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 5px;
+  font: 500 10.5px var(--sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: repeating-linear-gradient(45deg,
+    rgba(40,30,15,0.05), rgba(40,30,15,0.05) 4px,
+    rgba(40,30,15,0.02) 4px, rgba(40,30,15,0.02) 8px);
+  color: var(--ink-3);
+  border: 0.5px dashed var(--hair);
+}
+
+/* lightweight skeleton shimmer for loading states */
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    var(--m0) 0%, var(--wash) 50%, var(--m0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; border-radius: 9px;
+  font: 500 12.5px var(--sans);
+  background: var(--amber-2);
+  color: oklch(0.42 0.10 65);
+  border: 0.5px solid var(--amber);
+}
