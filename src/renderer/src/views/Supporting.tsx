@@ -5,6 +5,16 @@ import { useDB, useStore } from '../data/store'
 import { useAsync } from '../data/useAsync'
 import type { View } from '.'
 
+// Shared empty state — shown when a live read returns zero rows (⊥ silent mock).
+function EmptyState({ text, hint }: { text: string; hint?: string }) {
+  return (
+    <div style={{ padding: '26px 16px', textAlign: 'center' }}>
+      <div style={{ font: '500 13px var(--sans)', color: 'var(--ink-2)' }}>{text}</div>
+      {hint && <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginTop: 3 }}>{hint}</div>}
+    </div>
+  )
+}
+
 // ───────────────────────── ATOMIC FACTS ─────────────────────────
 export function FactsView() {
   const db = useDB()
@@ -112,7 +122,9 @@ export function AnkiView() {
         {status.live.has('anki') && <span className="badge moss" style={{ height: 18, padding: '0 6px' }}><span className="d" />live</span>}
       </div>
       <div className="card" style={{ overflow: 'hidden' }}>
-        {db.ANKI_QUEUE.map((c, i) => {
+        {db.ANKI_QUEUE.length === 0 ? (
+          <EmptyState text="No cards due" hint={status.live.has('anki') ? 'Anki review queue is empty — sync cards or check AnkiConnect' : 'backend offline · sample data'} />
+        ) : db.ANKI_QUEUE.map((c, i) => {
           const node = c.node != null ? db.NODE_BY_ID[c.node] : null
           return (
             <div key={c.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 160px 70px 80px 70px', padding: '12px 16px', alignItems: 'center', gap: 12, borderBottom: i === db.ANKI_QUEUE.length - 1 ? 'none' : '0.5px solid var(--hair-2)', cursor: 'pointer' }}>
@@ -262,15 +274,26 @@ export function SessionView() {
 
   // Live session summary (¶T2): counts + accuracy + flagged + per-node rollup.
   const live = useAsync(
-    () => (wantLive ? loadSessionSummary(s.id) : Promise.resolve(null)),
-    [wantLive, s.id]
+    () => (wantLive && s ? loadSessionSummary(s.id) : Promise.resolve(null)),
+    [wantLive, s?.id]
   )
   const d = live.data
   const loading = wantLive && live.loading
-  const testId = d?.testId ?? s.id
-  const attempts = d?.attempts ?? s.items
-  const correct = d?.correct ?? s.correct
-  const accuracy = d ? d.accuracy : (s.items ? s.correct / s.items : 0)
+  // No sessions (live empty) → real empty state, ⊥ crash on s.id (¶V1/¶V2)
+  if (!s && !d) {
+    return (
+      <div className="content-scroll">
+        <h1 className="h1">Sessions</h1>
+        <div className="card" style={{ marginTop: 20 }}>
+          <EmptyState text="No sessions yet" hint="capture attempts (extension / seed_dev) to build session history" />
+        </div>
+      </div>
+    )
+  }
+  const testId = d?.testId ?? s?.id ?? '—'
+  const attempts = d?.attempts ?? s?.items ?? 0
+  const correct = d?.correct ?? s?.correct ?? 0
+  const accuracy = d ? d.accuracy : (s && s.items ? s.correct / s.items : 0)
   const flaggedCount = d?.flaggedCount ?? 6
   const topicCount = d?.topicCount ?? 11
   // by_topic rows feed MasteryBars directly; fall back to sample nodes offline.
@@ -287,7 +310,7 @@ export function SessionView() {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
         <div style={{ flex: 1 }}>
           <h1 className="h1">{attempts} questions · {correct} correct</h1>
-          <p className="lede" style={{ marginTop: 6 }}>{s.date} · {s.time} wall-clock · {s.source} <span className="badge slate" style={{ marginLeft: 4 }}><span className="d" />{s.source}</span></p>
+          <p className="lede" style={{ marginTop: 6 }}>{s?.date ?? '—'} · {s?.time ?? '—'} wall-clock · {s?.source ?? 'uworld'} <span className="badge slate" style={{ marginLeft: 4 }}><span className="d" />{s?.source ?? 'uworld'}</span></p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="tb-btn ghost">Export to Notion</button>
@@ -359,6 +382,7 @@ export function CapturesView() {
           <span style={{ textAlign: 'center' }}>Status</span>
           <span style={{ textAlign: 'right' }}>When</span>
         </div>
+        {db.CAPTURES.length === 0 && <EmptyState text="No captures" hint="incoming questions land here from the extension / manual entry" />}
         {db.CAPTURES.map((c, i) => {
           const node = c.node ? db.NODE_BY_ID[c.node] : null
           const statusBadge = ({ categorized: { cls: 'moss', label: 'tagged' }, 'needs-review': { cls: 'amber', label: 'needs review' }, uncategorized: { cls: 'flagged', label: 'untagged' } } as Record<string, { cls: string; label: string }>)[c.status]

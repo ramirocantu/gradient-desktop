@@ -354,11 +354,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           live.add('flagged')
           next.TODAY = { ...next.TODAY, flaggedCount: r.flagged.length }
         }
-        if (r.sessions?.length) {
+        // Reachable-but-empty (`[]`) is real data → overlay it (empty state),
+        // ⊥ keep mock. Mock fallback applies only when the read FAILED
+        // (settleAll → undefined), not when the backend legitimately returns
+        // nothing. Distinguishes empty-live from offline (¶V1/¶V2).
+        if (r.sessions !== undefined) {
           live.add('sessions')
           next.SESSIONS = adaptSessions(r.sessions)
         }
-        if (r.captures?.length) {
+        if (r.captures !== undefined) {
           live.add('captures')
           next.CAPTURES = adaptCaptures(r.captures)
           next.TODAY = {
@@ -366,7 +370,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             capturesAwaiting: next.CAPTURES.filter((c) => c.status === 'uncategorized').length
           }
         }
-        if (r.ankiQ?.length) {
+        if (r.ankiQ !== undefined) {
           live.add('anki')
           next.ANKI_QUEUE = adaptAnkiQueue(r.ankiQ)
           next.TODAY = { ...next.TODAY, ankiDue: r.ankiQ.length }
