@@ -7,9 +7,17 @@ external surfaces here. Missing backend endpoints flagged `?`.
 
 ## ¶G
 
-Wire desktop client to live Gradient API on every surface; kill all sample/stub
-overlays. Mock deleted — empty base + per-domain live overlay. Offline / empty
-read ⇒ skeletons + empty-states; ⊥ sample/mock data.
+Generalize Gradient: MCAT-specific tool → course-agnostic study client. MCAT =
+seed course (`slug aamc`) only; ⊥ section codes (CP/CARS/BB/PS), UWorld, AAMC
+assumptions baked into core types/views/store. User uploads own course as
+structured outline (JSON/YAML) via `POST /api/v1/courses` +
+`/courses/{id}/outline:import` (Onboarding view). Domain nouns generic: course →
+outline tree of nodes → questions/cards/facts.
+
+Wiring goal (unchanged): wire desktop client to live Gradient API on every
+surface; kill all sample/stub overlays. Mock deleted — empty base + per-domain
+live overlay. Offline / empty read ⇒ skeletons + empty-states; ⊥ sample/mock
+data.
 
 ## ¶A
 
@@ -72,6 +80,7 @@ read ⇒ skeletons + empty-states; ⊥ sample/mock data.
 - V9: each domain swapped live ⇒ its empty-state / no-endpoint badge removed same change. ⊥ domain both live + badged.
 - V10: a ¶T marked "no backend change" must consume a field an existing endpoint actually **populates**. ⊥ assume TODO-stubbed / empty payload fields (e.g. `captures.topics`, session `by_topic`). Verify payload non-empty before tagging buildable-now. (¶B1)
 - V11: store base (`baseDB`) = empty (⊥ bundled mock); live API overlays per domain. Unwired controls = no-op `StubButton` (greyed indicator + TODO log), ⊥ fake-functional button silently doing nothing. (¶B2)
+- V12: ⊥ MCAT vocabulary (section codes CP/CARS/BB/PS / UWorld / AAMC) hardcoded in core types/views/store. Course-varying config (display name, section labels, question-source name) rides the course record loaded per-course, ⊥ literal const in shared code. MCAT = seed course (`slug aamc`), not a special case. (¶G)
 
 ## ¶P
 
@@ -106,6 +115,10 @@ read ⇒ skeletons + empty-states; ⊥ sample/mock data.
 | T12 | . | Tutor chat: `TUTOR_MESSAGES` mock removed → EmptyState ("MCP host pending"). Wire real Socratic turn via MCP host / `window.claude`; keep discriminator save | V5 |
 | T13 | x | `data/api.ts` extended with `getConceptEdges`/`getAtomicFacts`/`getNotionPages`/`getPdfSources` + raw types (`*Out`); adapters in `store.tsx`, ⊥ view-level fetch (Review by-node facts via `loadQuestion`). | V3 |
 | T14 | x | audit (post T8–T11): no domain both live + sample-badged. Dropped stale P2 badges on NodeDetail facts, Session "new connections", Notion "blocks written". Discriminator-listing keeps (P2) — write-only, no read route. | V1,V9 |
+| T15 | . | V12 teardown (fabrication, worst): `store.tsx:161,293` stamp `source:'uworld'` unconditionally on every session + reviewed question — fabricated attribute, not read from data. Derive source from real field (else `'manual'`/null); ⊥ unconditional `uworld`. No backend dep. | V12,V6 |
+| T16 | . | V12 teardown (core logic): `helpers.ts:39-44` `ABBR_HINTS` bakes AAMC section→abbr map (`B/BC`,`C/P`,`P/S`,`CARS`) into `deriveAbbr` — only valid for aamc outline. Abbr rides outline node payload (or none); drop section literals from shared helper. No backend dep. | V12 |
+| T17 | . | V12 teardown (view copy): `Home.tsx:149`, `Supporting.tsx:343,388,455` UWorld-named strings → generic ("capture sources") or course-driven labels. No logic, no backend dep. | V12,V3 |
+| T18 | . | V12 teardown (backend-coupled): `api.ts:70` `uworld_test_id` raw field + `store.tsx:106` branch → generic source name (e.g. `source_test_id`, `'qbank'`). Blocked on `../gradient-server` payload rename first; coordinate, do last. | V12,V4 |
 
 ## ¶B
 
