@@ -96,10 +96,10 @@ overlays. Offline fallback stays.
 | T5 | x | Review: live `picked`/`distribution`/`pastAttempts` from `by-qid` (`answer_distribution`+`picked`+`attempt_history`, backend T42). adaptChoices fixed to read `{key,plain}`. | V3,V6,backend-T42 |
 | T6 | x | Anki: real `retention` (else `retrievability`) per card; per-day `reviewed_series` from `/anki/load-adherence` → `ANKI_LOAD` (backend T43). ⊥ lapse-derived/sampled. | V3,V6,backend-T43 |
 | T7 | x | Mastery: `pseudoMastery` removed. Roots overlaid from `/outline/courses/{id}/mastery` at load; browsed subtree from `/outline/nodes/{id}/mastery` on select (backend T44). Unmeasured nodes = 0 (honest, ⊥ fabricated). Home badge → live. | V6,V9,V4,backend-T44 |
-| T8 | . | Connections feed: replace `CONNECTIONS` sample with `concept_edges` read API (?) (recent edges / by-node); via/score/kind from real edges | V6,V9,V4 |
-| T9 | . | Atomic facts: replace `FACTS` sample with `atomic_facts` read API (?) (by node / by pdf); wire FactsView + NodeFactsList + Review linked-facts | V6,V9,V4 |
-| T10 | . | Notion pages: replace `NOTION_PAGES` sample with `notion_pages` read API (?) (page index + status) | V6,V9,V4 |
-| T11 | . | PDFs: replace `PDFS` sample with `pdf_sources` read API (?) (inbox + per-pdf facts) | V6,V9,V4 |
+| T8 | . | Connections feed: replace `CONNECTIONS` sample with `concept_edges` read API (?) (recent edges / by-node); via/score/kind from real edges | V6,V9,V4,?backend-T45 |
+| T9 | . | Atomic facts: replace `FACTS` sample with `atomic_facts` read API (?) (by node / by pdf); wire FactsView + NodeFactsList + Review linked-facts | V6,V9,V4,?backend-T46 |
+| T10 | . | Notion pages: replace `NOTION_PAGES` sample with `notion_pages` read API (?) (page index + status) | V6,V9,V4,?backend-T47 |
+| T11 | . | PDFs: replace `PDFS` sample with `pdf_sources` read API (?) (inbox + per-pdf facts) | V6,V9,V4,?backend-T48 |
 | T12 | . | Tutor chat: wire real Socratic turn via MCP host / `window.claude` ⊥ `TUTOR_MESSAGES` mock; keep discriminator save | V5 |
 | T13 | . | extend `data/api.ts` with each new endpoint fn + raw type as backend ships; adapters only ⊥ view-level fetch | V3 |
 | T14 | . | audit: assert no domain both live + sample-badged after each wire | V1,V9 |
