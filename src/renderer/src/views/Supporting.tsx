@@ -2,6 +2,7 @@ import React from 'react'
 import { Icon, KindGlyph, StatCard, MasteryBars, EmptyState, StubButton } from '../components/primitives'
 import { masteryColor } from '../helpers'
 import { useDB, useStore } from '../data/store'
+import { cfg, saveConfig, isValidApiBase, probeConfig, type ConfigPatch } from '../data/client'
 import { useAsync } from '../data/useAsync'
 import type { View } from '.'
 
@@ -485,10 +486,9 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
 
       <h3 className="section-title" style={{ marginTop: 32 }}>Auth & tokens</h3>
       <div className="card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <SettingsRow label="X-Coach-Token" hint="Shared secret the extension and MCP host send" value={status.hasToken ? 'set' : 'not set'} />
+        <ConfigEditor />
         <SettingsRow label="OpenAI API key" hint="Used by categorizer, calibrator, embeddings" value={d?.openai.configured ? 'configured' : 'not set'} />
         <SettingsRow label="Notion integration token" hint="Write-out only · scoped to Gradient workspace" value={d?.notion.configured ? 'configured' : 'not set'} />
-        <SettingsRow label="API base URL" hint="Set GRADIENT_API_BASE to point elsewhere" value={status.apiBase} />
       </div>
 
       <h3 className="section-title" style={{ marginTop: 32 }}>Course management</h3>
@@ -516,6 +516,111 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
         {status.online
           ? `API live · ${status.live.size} data sources · ${status.apiBase}`
           : 'Backend offline'}
+      </div>
+    </div>
+  )
+}
+
+// Editable apiBase + X-Coach-Token (¶T20). Save persists via the main process
+// (saveConfig → window.gradient.save, ¶V8) and re-probes the backend so the
+// change lands without an app restart. Test checks reachability of the entered
+// values without persisting. These are real controls, ⊥ StubButton (¶V11).
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '7px 11px',
+  background: 'var(--sunken)',
+  border: '0.5px solid var(--hair)',
+  borderRadius: 7,
+  font: '500 12.5px var(--mono)',
+  color: 'var(--ink-2)',
+  outline: 'none'
+}
+
+function ConfigEditor() {
+  const { status, refresh } = useStore()
+  const [apiBase, setApiBase] = React.useState(status.apiBase)
+  const [token, setToken] = React.useState('') // blank = keep current token
+  const [test, setTest] = React.useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
+  const [saved, setSaved] = React.useState(false)
+
+  // Resync the input after a save/refresh updates the live config.
+  React.useEffect(() => setApiBase(status.apiBase), [status.apiBase])
+
+  const baseValid = isValidApiBase(apiBase)
+  const dirty = apiBase !== status.apiBase || token.length > 0
+  const canSave = baseValid && dirty
+
+  const onSave = async (): Promise<void> => {
+    if (!canSave) return
+    const patch: ConfigPatch = {}
+    if (apiBase !== status.apiBase) patch.apiBase = apiBase.trim()
+    if (token) patch.coachToken = token
+    await saveConfig(patch)
+    setToken('')
+    setTest('idle')
+    setSaved(true)
+    refresh() // re-probe every domain against the new config
+    setTimeout(() => setSaved(false), 2200)
+  }
+
+  const onTest = async (): Promise<void> => {
+    setTest('testing')
+    const ok = await probeConfig(apiBase, token || cfg.coachToken)
+    setTest(ok ? 'ok' : 'fail')
+  }
+
+  const labelCol = (label: string, hint: string): React.ReactNode => (
+    <div>
+      <div style={{ font: '600 13px var(--sans)', color: 'var(--ink)' }}>{label}</div>
+      <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginTop: 1 }}>{hint}</div>
+    </div>
+  )
+
+  let note = ''
+  let noteColor = 'var(--ink-3)'
+  if (apiBase && !baseValid) { note = 'Enter a valid http(s) URL'; noteColor = 'oklch(0.62 0.18 30)' }
+  else if (test === 'testing') note = 'Testing…'
+  else if (test === 'ok') { note = 'Reachable'; noteColor = 'var(--moss)' }
+  else if (test === 'fail') { note = 'Unreachable'; noteColor = 'oklch(0.62 0.18 30)' }
+  else if (saved) { note = 'Saved'; noteColor = 'var(--moss)' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, alignItems: 'center' }}>
+        {labelCol('X-Coach-Token', status.hasToken ? 'Shared secret · currently set' : 'Shared secret · not set')}
+        <input
+          type="password"
+          value={token}
+          onChange={(e) => { setToken(e.target.value); setTest('idle') }}
+          placeholder={status.hasToken ? '•••••••• · leave blank to keep current' : 'Paste coach token'}
+          style={inputStyle}
+        />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, alignItems: 'center' }}>
+        {labelCol('API base URL', 'Where the Gradient backend is reachable')}
+        <input
+          type="text"
+          value={apiBase}
+          onChange={(e) => { setApiBase(e.target.value); setTest('idle') }}
+          placeholder="http://localhost:8000"
+          style={inputStyle}
+        />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
+        {note && <span style={{ font: '500 11.5px var(--sans)', color: noteColor, marginRight: 'auto' }}>{note}</span>}
+        <button
+          className="tb-btn ghost"
+          style={{ height: 26 }}
+          disabled={!baseValid || test === 'testing'}
+          onClick={onTest}
+        >Test</button>
+        <button
+          className="tb-btn primary"
+          style={{ height: 26 }}
+          disabled={!canSave}
+          onClick={onSave}
+        >Save</button>
       </div>
     </div>
   )

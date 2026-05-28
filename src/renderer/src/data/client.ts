@@ -10,9 +10,19 @@ interface GradientConfig {
   platform?: string
 }
 
+// The two values a user may change at runtime via Settings (¶V13).
+export interface ConfigPatch {
+  apiBase?: string
+  coachToken?: string
+}
+
 declare global {
   interface Window {
-    gradient?: GradientConfig
+    gradient?: GradientConfig & {
+      // Persist a config change to disk via the main process (¶V8). Present
+      // only under Electron; undefined in a plain browser dev context.
+      save?: (patch: ConfigPatch) => Promise<unknown>
+    }
   }
 }
 
@@ -20,6 +30,44 @@ export const cfg: GradientConfig = window.gradient ?? {
   apiBase: 'http://localhost:8000',
   coachToken: '',
   courseSlug: 'aamc'
+}
+
+// Update the live in-memory config so in-flight reads pick up new values
+// without an app restart (the `api` helper reads cfg at request time). Disk
+// persistence is owned by the main process via window.gradient.save (¶V8).
+export function applyConfig(patch: ConfigPatch): void {
+  if (typeof patch.apiBase === 'string') cfg.apiBase = patch.apiBase
+  if (typeof patch.coachToken === 'string') cfg.coachToken = patch.coachToken
+}
+
+// Apply to the live session immediately, then persist via main (best-effort).
+export async function saveConfig(patch: ConfigPatch): Promise<void> {
+  applyConfig(patch)
+  await window.gradient?.save?.(patch)
+}
+
+// apiBase must be an absolute http(s) URL — block Save otherwise.
+export function isValidApiBase(s: string): boolean {
+  try {
+    const u = new URL(s)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+// One-shot reachability probe against entered values WITHOUT mutating cfg —
+// backs the Settings "Test" button. healthz is an open route.
+export async function probeConfig(apiBase: string, token: string): Promise<boolean> {
+  if (!isValidApiBase(apiBase)) return false
+  try {
+    const res = await fetch(`${apiBase.replace(/\/+$/, '')}/api/v1/tutor/healthz`, {
+      headers: token ? { 'X-Coach-Token': token } : {}
+    })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 export class ApiError extends Error {
