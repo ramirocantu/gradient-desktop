@@ -151,14 +151,17 @@ function adaptSessionSummary(s: API.SessionSummary): SessionDetailT {
   }
 }
 
-function adaptSessions(rows: API.RecentSession[]): SessionT[] {
+export function adaptSessions(rows: API.RecentSession[]): SessionT[] {
   return rows.map((r) => ({
     id: r.test_id,
     date: relTime(r.ended_at ?? r.started_at),
     items: r.attempt_count,
     correct: r.correct_count,
     time: minutesBetween(r.started_at, r.ended_at),
-    source: 'uworld',
+    // ¶T15: RecentSession carries no question-source field → honest unknown
+    // (''), ⊥ fabricated 'uworld' (V12,V6). Course-level source name would ride
+    // the course record once the backend surfaces it.
+    source: '',
     node: 1
   }))
 }
@@ -275,7 +278,7 @@ function adaptChoices(
   })
 }
 
-function adaptQuestion(
+export function adaptQuestion(
   q: API.QuestionDetail,
   cards: API.AnkiCardOut[],
   facts: API.AtomicFactOut[] = []
@@ -290,7 +293,9 @@ function adaptQuestion(
   return {
     qid: q.qid,
     questionId: q.question_id,
-    source: 'uworld',
+    // ¶T15: QuestionDetail carries no qbank source field (tags[].source is tag
+    // provenance, not source) → honest unknown (''), ⊥ fabricated 'uworld'.
+    source: '',
     testId: '—',
     attemptedAt: history[0] ? relTime(history[0].attempted_at) : '—',
     timeSeconds: history[0]?.time_seconds ?? 0,

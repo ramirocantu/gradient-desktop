@@ -67,7 +67,7 @@ export function ReviewView({ tweaks }: { tweaks: Tweaks }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <div style={{ padding: '10px 24px', borderBottom: '0.5px solid var(--hair)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
           <span className="mono" style={{ font: '500 12px var(--mono)', color: 'var(--ink)', whiteSpace: 'nowrap' }}>Q · {Q.qid}</span>
-          <span className="badge slate"><span className="d" />{Q.source}</span>
+          {Q.source && <span className="badge slate"><span className="d" />{Q.source}</span>}
           <span className="badge"><span className="d" />{Q.testId}</span>
           {Q.flagged && <span className="badge flagged"><span className="d" />flagged</span>}
           <span style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>
