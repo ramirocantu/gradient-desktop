@@ -124,7 +124,7 @@ data.
 | T18 | . | V12 teardown (backend-coupled): `api.ts:70` `uworld_test_id` raw field + `store.tsx:106` branch → generic source name (e.g. `source_test_id`, `'qbank'`). Blocked on `../gradient-server` payload rename first; coordinate, do last. | V12,V4 |
 | T19 | x | Electron main: persist user config (apiBase + coachToken) in app `userData` JSON; preload merges persisted-over-env when building `window.gradient`; expose IPC setter (`window.gradient.save`). `cfg` precedence persisted > env. ⊥ renderer disk write. Token plaintext userData (keychain = future). | V8,I.env |
 | T20 | x | SettingsView: X-Coach-Token + API base → editable inputs + Save (writes via T19 IPC); live `cfg` updates + re-probe (`loadSystemStatus`) w/o app restart; "Test" re-probes entered values. Replace read-only value + Reveal/Rotate/Test stubs for these two fields w/ real controls. Validate apiBase = http(s) URL. | V8,V11 |
-| T21 | . | Settings: drop non-settable credential/URL rows — remove OpenAI API key + Notion integration token `SettingsRow`s from "Auth & tokens" (backend-owned, ⊥ set from desktop). Keep OpenAI/Notion only as read-only reachability in Connections. | V13 |
+| T21 | x | Settings: drop non-settable credential/URL rows — remove OpenAI API key + Notion integration token `SettingsRow`s from "Auth & tokens" (backend-owned, ⊥ set from desktop). Keep OpenAI/Notion only as read-only reachability in Connections. | V13 |
 
 ## ¶B
 

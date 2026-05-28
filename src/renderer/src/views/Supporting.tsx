@@ -484,11 +484,12 @@ export function SettingsView({ setView }: { setView: (v: View) => void }) {
         ))}
       </div>
 
+      {/* Only the two values the client needs to reach the backend are settable
+          here (¶V13). OpenAI / Notion / AnkiConnect are backend-owned — their
+          reachability shows read-only in Connections above, never set here. */}
       <h3 className="section-title" style={{ marginTop: 32 }}>Auth & tokens</h3>
-      <div className="card" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="card" style={{ padding: '16px 18px' }}>
         <ConfigEditor />
-        <SettingsRow label="OpenAI API key" hint="Used by categorizer, calibrator, embeddings" value={d?.openai.configured ? 'configured' : 'not set'} />
-        <SettingsRow label="Notion integration token" hint="Write-out only · scoped to Gradient workspace" value={d?.notion.configured ? 'configured' : 'not set'} />
       </div>
 
       <h3 className="section-title" style={{ marginTop: 32 }}>Course management</h3>
@@ -621,22 +622,6 @@ function ConfigEditor() {
           disabled={!canSave}
           onClick={onSave}
         >Save</button>
-      </div>
-    </div>
-  )
-}
-
-function SettingsRow({ label, hint, value }: { label: string; hint: string; value: string }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr auto', gap: 16, alignItems: 'center' }}>
-      <div>
-        <div style={{ font: '600 13px var(--sans)', color: 'var(--ink)' }}>{label}</div>
-        <div style={{ font: '500 11.5px var(--sans)', color: 'var(--ink-3)', marginTop: 1 }}>{hint}</div>
-      </div>
-      <div style={{ padding: '7px 11px', background: 'var(--sunken)', border: '0.5px solid var(--hair)', borderRadius: 7, font: '500 12.5px var(--mono)', color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
-      <div style={{ display: 'flex', gap: 4 }}>
-        <StubButton name="settings-reveal-secret" className="tb-btn ghost" style={{ height: 26 }}>Reveal</StubButton>
-        <StubButton name="settings-rotate-secret" className="tb-btn ghost" style={{ height: 26 }}>Rotate</StubButton>
       </div>
     </div>
   )
