@@ -34,16 +34,3 @@ export function makeNodePath(byId: Record<number, OutlineNodeT>) {
     return parts
   }
 }
-
-// Section abbreviation heuristic for live nodes that lack a design-supplied abbr.
-const ABBR_HINTS: Record<string, string> = {
-  'biological': 'B/BC',
-  'chemical': 'C/P',
-  'psychological': 'P/S',
-  'critical analysis': 'CARS'
-}
-export function deriveAbbr(name: string): string | undefined {
-  const lower = name.toLowerCase()
-  for (const [k, v] of Object.entries(ABBR_HINTS)) if (lower.includes(k)) return v
-  return undefined
-}

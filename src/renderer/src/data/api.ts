@@ -18,6 +18,10 @@ export interface ApiOutlineNode {
   depth: number
   position: number
   path?: string
+  // Course-supplied short label (e.g. a section code). Not surfaced by the
+  // backend today; read forward-compat (¶V12 — abbr rides the payload per
+  // course, ⊥ derived from a hardcoded section-name map).
+  abbr?: string
 }
 export interface OutlineTreeResp {
   course: ApiCourse
@@ -50,6 +54,8 @@ export interface ByTopic {
   attempt_count: number
   correct_count: number
   accuracy: number
+  // Course-supplied short label; not surfaced by the backend today (¶V12).
+  abbr?: string
 }
 export interface SessionSummary extends RecentSession {
   by_topic: ByTopic[]

@@ -23,7 +23,7 @@ noun is **course**.
 
 ### How users bring their own course
 
-Schema arrives as a **structured outline file (JSON / YAML)** imported through
+Schema arrives as a **structured outline file (JSON)** imported through
 the existing backend onboarding writes:
 
 - `POST /api/v1/courses` — create the course

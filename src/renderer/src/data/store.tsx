@@ -2,7 +2,7 @@ import React from 'react'
 import * as API from './api'
 import { ApiError, cfg } from './client'
 import { settleAll } from './settle'
-import { buildNodeIndex, makeNodePath, deriveAbbr } from '../helpers'
+import { buildNodeIndex, makeNodePath } from '../helpers'
 import type {
   DB, Course, OutlineNodeT, CaptureT, SessionT, AnkiCardT, ReviewQuestionT, ChoiceT, SessionDetailT,
   SystemStatusT, NodeMasteryT, TodayT, ConnectionT, FactT, NotionPageT, PdfT
@@ -63,7 +63,7 @@ function minutesBetween(a: string | null, b: string | null): string {
 }
 
 // ───────────────────────── adapters (API → DB shape) ─────────────────────────
-function adaptOutline(resp: API.OutlineTreeResp): OutlineNodeT[] {
+export function adaptOutline(resp: API.OutlineTreeResp): OutlineNodeT[] {
   const kids = new Map<number, number[]>()
   for (const n of resp.nodes) {
     if (n.parent_id != null) {
@@ -82,7 +82,9 @@ function adaptOutline(resp: API.OutlineTreeResp): OutlineNodeT[] {
     depth: n.depth,
     kind: n.kind,
     name: n.name,
-    abbr: n.depth === 0 ? deriveAbbr(n.name) : undefined,
+    // Abbr rides the course's node payload, ⊥ a hardcoded section-name map
+    // (¶V12). Backend doesn't surface it yet → undefined → no chip rendered.
+    abbr: n.abbr,
     // real mastery overlaid from the course-mastery endpoint after load (¶T7);
     // 0 = no measured attempts yet (honest, ⊥ fabricated pseudo-value).
     mastery: 0,
@@ -132,7 +134,7 @@ function firstTopicNodeId(topics: unknown): number | null {
   return null
 }
 
-function adaptSessionSummary(s: API.SessionSummary): SessionDetailT {
+export function adaptSessionSummary(s: API.SessionSummary): SessionDetailT {
   return {
     testId: s.test_id,
     attempts: s.attempt_count,
@@ -145,7 +147,8 @@ function adaptSessionSummary(s: API.SessionSummary): SessionDetailT {
       name: t.name,
       mastery: t.accuracy,
       items: t.attempt_count,
-      abbr: deriveAbbr(t.name)
+      // course payload abbr, ⊥ derived section literals (¶V12)
+      abbr: t.abbr
     })),
     topicCount: s.by_topic.length
   }
