@@ -84,6 +84,7 @@ data.
 - V11: store base (`baseDB`) = empty (⊥ bundled mock); live API overlays per domain. Unwired controls = no-op `StubButton` (greyed indicator + TODO log), ⊥ fake-functional button silently doing nothing. (¶B2)
 - V12: ⊥ MCAT vocabulary (section codes CP/CARS/BB/PS / UWorld / AAMC) hardcoded in core types/views/store. Course-varying config (display name, section labels, question-source name) rides the course record loaded per-course, ⊥ literal const in shared code. MCAT = seed course (`slug aamc`), not a special case. (¶G)
 - V13: Settings config surface sets only apiBase + coachToken — the two the client needs to reach the backend. ⊥ collect other secrets/URLs in renderer (OpenAI key, Notion token, AnkiConnect URL = backend-owned; shown read-only as reachability only).
+- V14: live renderer config (`client.ts` `cfg`) = mutable field-copy of `window.gradient`. ⊥ alias the bridged object — `contextBridge.exposeInMainWorld` deep-freezes it, so a write (`applyConfig`) throws "Cannot assign to read only property". (¶B3)
 
 ## ¶P
 
@@ -131,4 +132,5 @@ data.
 | id | date | cause | fix |
 | B1 | 2026-05-27 | ¶T1/¶T2 scoped "no backend change" but the fields they consume are empty TODO stubs in the backend — `captures.topics` always `[]` (`app/services/tutor/captures.py:30`), session `by_topic`/`top_topics` always `[]` (`sessions.py:85`), and summary has no per-attempt correctness array. Found at build plan time, not test time. | Added ¶V10 (verify payload populated before tagging no-backend). Client adapter `firstTopicNodeId` made forward-compatible (accepts id / `{node_id}` / `{id}`); ¶T1 held at `~`. Backend surfacing tracked in `../SPEC.md` T38. ¶T1/¶T2 cites now flag `?backend-T38`. |
 | B2 | 2026-05-27 | Bundled mock (`data/mock.ts`) was both the store base AND the offline fallback (old ¶V2 "navigable on sample data"). User asked to remove all mock + build empty handlers; naive delete blanks/crashes every empty-or-offline surface (views index `db.X[0]`, `REVIEW_QUESTION.qid`, etc). | Deleted `data/mock.ts`; `baseDB` now empty; backed domains skeleton+empty-state, no-endpoint domains EmptyState, dead controls → no-op `StubButton`. Guards added where views derefed `[0]`/`find`. ¶G/¶C/¶V1/¶V2/¶V6/¶V9 amended; added ¶V11. ¶T8–¶T12 re-scoped sample→empty-state. |
+| B3 | 2026-05-28 | `client.ts` `cfg` aliased `window.gradient`; `contextBridge.exposeInMainWorld` deep-freezes the bridged object, so `applyConfig` `cfg.coachToken = …` threw "Cannot assign to read only property 'coachToken'" on Settings Save (¶T20). Test stub was an unfrozen object → never reproduced. | Added ¶V14; `cfg` now a mutable field-copy of `window.gradient`. `client.config.test.ts` stub `Object.freeze`'d to reproduce the freeze. |
 |----|------|-------|-----|

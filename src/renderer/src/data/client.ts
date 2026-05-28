@@ -26,10 +26,15 @@ declare global {
   }
 }
 
-export const cfg: GradientConfig = window.gradient ?? {
-  apiBase: 'http://localhost:8000',
-  coachToken: '',
-  courseSlug: 'aamc'
+// A MUTABLE copy of the bridged config — never the bridge object itself.
+// contextBridge.exposeInMainWorld deep-freezes `window.gradient`, so aliasing
+// it would make applyConfig's writes throw "Cannot assign to read only
+// property". Copy the fields into a fresh object we own.
+export const cfg: GradientConfig = {
+  apiBase: window.gradient?.apiBase ?? 'http://localhost:8000',
+  coachToken: window.gradient?.coachToken ?? '',
+  courseSlug: window.gradient?.courseSlug ?? 'aamc',
+  platform: window.gradient?.platform
 }
 
 // Update the live in-memory config so in-flight reads pick up new values

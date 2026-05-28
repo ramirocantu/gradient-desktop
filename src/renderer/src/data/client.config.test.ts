@@ -2,8 +2,11 @@ import { describe, it, expect } from 'vitest'
 
 // client.ts reads window.gradient at module load; stub before dynamic import
 // (a static import hoists above this assignment and crashes on `window`).
+// FROZEN on purpose: contextBridge.exposeInMainWorld deep-freezes the bridged
+// object, so cfg must copy it — aliasing the frozen object makes applyConfig
+// throw (¶B3 / ¶V14).
 ;(globalThis as { window?: unknown }).window ??= {
-  gradient: { apiBase: 'http://localhost:8000', coachToken: '', courseSlug: 'aamc' }
+  gradient: Object.freeze({ apiBase: 'http://localhost:8000', coachToken: '', courseSlug: 'aamc' })
 }
 
 const { cfg, applyConfig, isValidApiBase } = await import('./client')
