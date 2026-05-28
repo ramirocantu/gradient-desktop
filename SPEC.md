@@ -29,7 +29,9 @@ data.
   (X-Coach-Token, timeout). `data/api.ts` typed endpoint fns. adapters map API
   payload → view shape (`adapt*` in store).
 - preload (`src/preload/index.ts`) bridges `window.gradient` = {apiBase,
-  coachToken, courseSlug, platform} from env.
+  coachToken, courseSlug, platform}. Main process owns persisted user config
+  (`userData` JSON) for apiBase + coachToken; preload merges persisted-over-env
+  into `window.gradient`. Renderer writes config via main IPC, never disk (¶V8).
 - views read one composite `DB` via `useDB()`; field names = design prototype.
 
 ## ¶C
@@ -65,7 +67,7 @@ data.
 - `?` `/anki/load-adherence` extended to per-day series (today: single projected number).
 
 ### env (preload → renderer)
-- `GRADIENT_API_BASE` (def `http://localhost:8000`) · `COACH_TOKEN` · `GRADIENT_COURSE_SLUG` (def `aamc`).
+- `GRADIENT_API_BASE` (def `http://localhost:8000`) · `COACH_TOKEN` = **seed defaults**; user can override via Settings, persisted in app `userData` JSON (main process). Precedence **persisted > env**. `GRADIENT_COURSE_SLUG` (def `aamc`) = env/onboarding only.
 
 ## ¶V
 
@@ -76,11 +78,12 @@ data.
 - V5: writes safe — discriminator dedup `(question_id, factor_text)`; HTTP 409 = already-saved = success. ⊥ duplicate-on-retry.
 - V6: mastery / connections / atomic_facts / notion shown from real endpoint only; until endpoint ships, empty-state (no-endpoint badge). ⊥ fabricate per-node mastery or sample rows as if measured.
 - V7: token-gated reads degrade independently (`Promise.allSettled`). One 401/500 ⊥ blank whole app.
-- V8: apiBase + coachToken + courseSlug from env/preload. ⊥ hardcode in renderer.
+- V8: apiBase + coachToken + courseSlug resolved by preload as persisted-user-config (main-process `userData` JSON) over env default. Settings may write apiBase + coachToken via main IPC; ⊥ hardcode literal in renderer; ⊥ renderer write to disk directly (goes through main). courseSlug stays env/onboarding.
 - V9: each domain swapped live ⇒ its empty-state / no-endpoint badge removed same change. ⊥ domain both live + badged.
 - V10: a ¶T marked "no backend change" must consume a field an existing endpoint actually **populates**. ⊥ assume TODO-stubbed / empty payload fields (e.g. `captures.topics`, session `by_topic`). Verify payload non-empty before tagging buildable-now. (¶B1)
 - V11: store base (`baseDB`) = empty (⊥ bundled mock); live API overlays per domain. Unwired controls = no-op `StubButton` (greyed indicator + TODO log), ⊥ fake-functional button silently doing nothing. (¶B2)
 - V12: ⊥ MCAT vocabulary (section codes CP/CARS/BB/PS / UWorld / AAMC) hardcoded in core types/views/store. Course-varying config (display name, section labels, question-source name) rides the course record loaded per-course, ⊥ literal const in shared code. MCAT = seed course (`slug aamc`), not a special case. (¶G)
+- V13: Settings config surface sets only apiBase + coachToken — the two the client needs to reach the backend. ⊥ collect other secrets/URLs in renderer (OpenAI key, Notion token, AnkiConnect URL = backend-owned; shown read-only as reachability only).
 
 ## ¶P
 
@@ -119,6 +122,9 @@ data.
 | T16 | x | V12 teardown (core logic): `helpers.ts:39-44` `ABBR_HINTS` bakes AAMC section→abbr map (`B/BC`,`C/P`,`P/S`,`CARS`) into `deriveAbbr` — only valid for aamc outline. Abbr rides outline node payload (or none); drop section literals from shared helper. No backend dep. | V12 |
 | T17 | . | V12 teardown (view copy): `Home.tsx:149`, `Supporting.tsx:343,388,455` UWorld-named strings → generic ("capture sources") or course-driven labels. No logic, no backend dep. | V12,V3 |
 | T18 | . | V12 teardown (backend-coupled): `api.ts:70` `uworld_test_id` raw field + `store.tsx:106` branch → generic source name (e.g. `source_test_id`, `'qbank'`). Blocked on `../gradient-server` payload rename first; coordinate, do last. | V12,V4 |
+| T19 | x | Electron main: persist user config (apiBase + coachToken) in app `userData` JSON; preload merges persisted-over-env when building `window.gradient`; expose IPC setter (`window.gradient.save`). `cfg` precedence persisted > env. ⊥ renderer disk write. Token plaintext userData (keychain = future). | V8,I.env |
+| T20 | . | SettingsView: X-Coach-Token + API base → editable inputs + Save (writes via T19 IPC); live `cfg` updates + re-probe (`loadSystemStatus`) w/o app restart; "Test" re-probes entered values. Replace read-only value + Reveal/Rotate/Test stubs for these two fields w/ real controls. Validate apiBase = http(s) URL. | V8,V11 |
+| T21 | . | Settings: drop non-settable credential/URL rows — remove OpenAI API key + Notion integration token `SettingsRow`s from "Auth & tokens" (backend-owned, ⊥ set from desktop). Keep OpenAI/Notion only as read-only reachability in Connections. | V13 |
 
 ## ¶B
 

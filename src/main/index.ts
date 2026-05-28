@@ -1,5 +1,41 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { sanitizePatch, type ConfigPatch } from '../preload/config'
+
+// Persisted user config (apiBase + coachToken) lives in a JSON file under the
+// app's userData dir. The renderer never touches disk — it goes through these
+// IPC channels (¶V8). Token is stored plaintext (same exposure as the env var
+// it overrides); OS keychain is a future hardening.
+function configPath(): string {
+  return join(app.getPath('userData'), 'gradient-config.json')
+}
+
+function readPersistedConfig(): ConfigPatch {
+  try {
+    return sanitizePatch(JSON.parse(readFileSync(configPath(), 'utf8')))
+  } catch {
+    return {} // no file yet / unreadable → env defaults apply
+  }
+}
+
+function writePersistedConfig(patch: unknown): ConfigPatch {
+  const merged = { ...readPersistedConfig(), ...sanitizePatch(patch) }
+  try {
+    mkdirSync(app.getPath('userData'), { recursive: true })
+    writeFileSync(configPath(), JSON.stringify(merged, null, 2), 'utf8')
+  } catch {
+    /* best-effort persist; live session still uses the value via the renderer */
+  }
+  return merged
+}
+
+// Synchronous read so the preload can build window.gradient before the renderer
+// boots; async write for Save.
+ipcMain.on('gradient:get-config', (e) => {
+  e.returnValue = readPersistedConfig()
+})
+ipcMain.handle('gradient:set-config', (_e, patch) => writePersistedConfig(patch))
 
 // The design draws its content edge-to-edge with the macOS traffic lights
 // living over the top-left of the sidebar. `hiddenInset` gives us exactly that:
