@@ -99,7 +99,7 @@ function applyMastery(outline: OutlineNodeT[], byId: Record<number, number>): Ou
   return outline.map((n) => (byId[n.id] != null ? { ...n, mastery: byId[n.id] } : n))
 }
 
-function adaptCaptures(rows: API.RecentCapture[]): CaptureT[] {
+export function adaptCaptures(rows: API.RecentCapture[]): CaptureT[] {
   return rows.map((r) => {
     const node = firstTopicNodeId(r.topics)
     const tagged = node != null
@@ -171,7 +171,7 @@ export function adaptSessions(rows: API.RecentSession[]): SessionT[] {
 
 // ¶T8: concept_edges → connections feed. Edge endpoints already carry node
 // names; NODE_BY_ID is a fallback. `via` = edge kind (similarity|manual).
-function adaptEdges(rows: API.ConceptEdgeOut[], byId: Record<number, OutlineNodeT>): ConnectionT[] {
+export function adaptEdges(rows: API.ConceptEdgeOut[], byId: Record<number, OutlineNodeT>): ConnectionT[] {
   const label = (e: { node_id: number; name: string | null }) =>
     e.name ?? byId[e.node_id]?.name ?? `node ${e.node_id}`
   return rows.map((e) => ({
@@ -192,7 +192,7 @@ function pdfStem(name: string | null, fallbackId: number): string {
 
 // ¶T9: atomic_facts → FactT. `version` (extractor_version) lives on
 // atomic_fact_tags, not the /atomic-facts payload (§I) → shown as "—".
-function adaptFacts(rows: API.AtomicFactOut[]): FactT[] {
+export function adaptFacts(rows: API.AtomicFactOut[]): FactT[] {
   return rows.map((f) => ({
     id: `f-${f.id}`,
     text: f.text,
@@ -206,7 +206,7 @@ function adaptFacts(rows: API.AtomicFactOut[]): FactT[] {
 // ¶T10: notion_pages pointer index → NotionPageT. `status` is derived from
 // last_synced_at (no status column, §I); `blocks` (block_count) is not modeled
 // → 0, rendered as "—" by the view (⊥ fabricate a count).
-function adaptNotionPages(rows: API.NotionPageOut[], byId: Record<number, OutlineNodeT>): NotionPageT[] {
+export function adaptNotionPages(rows: API.NotionPageOut[], byId: Record<number, OutlineNodeT>): NotionPageT[] {
   return rows.map((p) => ({
     id: `np-${p.node_id}`,
     node: p.node_id,
@@ -221,7 +221,7 @@ function adaptNotionPages(rows: API.NotionPageOut[], byId: Record<number, Outlin
 // ¶T11: pdf_sources inbox → PdfT. `pages` (page count) and per-PDF `node` are
 // not modeled (§I — pdf_sources is course-scoped); pages → 0 (view shows "—"),
 // node → null. `factsCount` is the route's atomic_facts rollup.
-function adaptPdfs(rows: API.PdfSourceOut[]): PdfT[] {
+export function adaptPdfs(rows: API.PdfSourceOut[]): PdfT[] {
   return rows.map((p) => ({
     id: `pdf-${p.id}`,
     filename: p.filename,
@@ -234,7 +234,7 @@ function adaptPdfs(rows: API.PdfSourceOut[]): PdfT[] {
   }))
 }
 
-function adaptAnkiQueue(rows: API.AnkiCardOut[]): AnkiCardT[] {
+export function adaptAnkiQueue(rows: API.AnkiCardOut[]): AnkiCardT[] {
   return rows.map((c) => {
     const firstField =
       c.fields_json && typeof c.fields_json === 'object'
@@ -258,7 +258,7 @@ function adaptAnkiQueue(rows: API.AnkiCardOut[]): AnkiCardT[] {
   })
 }
 
-function adaptChoices(
+export function adaptChoices(
   raw: unknown,
   correct: string | null,
   distribution: Record<string, number>,
