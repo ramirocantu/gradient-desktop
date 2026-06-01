@@ -20,19 +20,29 @@ for the redesign north-star and `SPEC.md` for invariants.
 
 ## Run
 
-```bash
-cd desktop
-npm install
-npm run dev          # launches Electron pointed at the Vite dev server
-```
-
-Build / preview a production bundle:
+The toolchain + tasks run on [mise](https://mise.jdx.dev) (shared with `../gradient-server`).
+`mise install` provisions the pinned host Node; `mise run <task>` wraps the npm scripts. Raw npm
+still works if you prefer.
 
 ```bash
-npm run build
-npm run start
-npm run typecheck
+mise install         # provision the pinned host Node (v22.x)
+mise run dev         # launches Electron pointed at the Vite dev server
+# raw npm equivalents: npm install / npm run dev
 ```
+
+Build / preview a production bundle, type check, test:
+
+```bash
+mise run build       # npm run build
+mise run start       # npm run start
+mise run typecheck   # npm run typecheck (both tsconfigs)
+mise run test        # npm test
+mise run check       # typecheck + test (run before declaring done)
+```
+
+For dev-only backend config, copy `mise.local.example.toml` → `mise.local.toml` (gitignored) and set
+`GRADIENT_API_BASE` / `COACH_TOKEN`. mise sets these for the dev launch; they reach the renderer via
+the preload bridge (env-injected, never hardcoded — see below).
 
 ## Backend connection
 

@@ -1,0 +1,63 @@
+[tools]
+# Pin the HOST toolchain Node — the runtime that dev tooling (electron-vite,
+# vitest, tsc) runs on. Matches the current host line (v22.x) so both repos
+# share one known runtime. Electron itself bundles its own Node for the app
+# process; this pin does NOT affect that — host toolchain only.
+node = "22.22.3"
+
+[env]
+# Put project bins on PATH so vite/vitest/tsc/electron-vite are runnable as bare
+# binaries (`vitest run`, not `npx vitest run`) — mirrors the backend's
+# `.venv/bin` convention. Also how Claude Code's official typescript-lsp plugin
+# finds `typescript-language-server` (a devDependency); it launches the binary
+# from PATH (can't use `npx`), exactly like the backend's pyright-lsp. Tasks
+# below stay explicit; this is for ad-hoc shells + the LSP plugin.
+_.path = ["node_modules/.bin"]
+
+# ── Core dev ────────────────────────────────────────────────────────────────
+# Each task wraps the matching package.json script so commands are identical
+# across the desktop and backend repos (`mise run dev|test|...`). No per-branch
+# database machinery — the desktop client has no DB (it reads the backend over
+# HTTP); that part of the backend's mise.toml is intentionally dropped.
+
+[tasks.install]
+description = "Install Node dependencies"
+run = "npm install"
+
+[tasks.dev]
+description = "Run the Electron app against the Vite dev server"
+run = "electron-vite dev"
+
+[tasks.build]
+description = "Build the production bundle into out/"
+run = "electron-vite build"
+
+[tasks.start]
+description = "Preview the built production bundle"
+run = "electron-vite preview"
+
+[tasks.test]
+description = "Run the Vitest suite once"
+run = "vitest run"
+
+[tasks.typecheck]
+description = "Type check both tsconfigs (renderer+preload, then main)"
+run = "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
+
+[tasks.check]
+description = "Run typecheck + tests (run before declaring done)"
+run = [
+  { task = "typecheck" },
+  { task = "test" },
+]
+
+# ── Language servers ──────────────────────────────────────────────────────────
+# The TypeScript type LSP (typescript-language-server) is launched by Claude
+# Code's official typescript-lsp plugin, which finds it on PATH via
+# [env] _.path = ["node_modules/.bin"]. Exposed here as a manual launch command
+# for editors / other agents. Version comes from package-lock.json — same
+# everywhere. Mirrors the backend's `lsp:ruff`.
+
+[tasks."lsp:ts"]
+description = "TypeScript language server (stdio)"
+run = "typescript-language-server --stdio"
