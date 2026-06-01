@@ -1,0 +1,17 @@
+# Copy to mise.local.toml (gitignored) for dev-only backend connection config.
+# mise loads mise.local.toml automatically and sets these in the environment for
+# `mise run dev`. The preload bridge reads them and injects into the renderer
+# (¶V8) — apiBase/coachToken are NEVER hardcoded in renderer code; mise only
+# sets them for the dev launch. courseSlug stays env/onboarding (default `aamc`).
+#
+#   cp mise.local.example.toml mise.local.toml
+#
+[env]
+# FastAPI backend base URL (default in-app: http://localhost:8000).
+GRADIENT_API_BASE = "http://localhost:8000"
+
+# X-Coach-Token for token-gated /api/v1 routes. Leave empty for open routes.
+COACH_TOKEN = ""
+
+# Which course to load (default: aamc — the seed course).
+# GRADIENT_COURSE_SLUG = "aamc"
